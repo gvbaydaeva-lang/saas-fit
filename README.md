@@ -10,11 +10,19 @@ View your app in AI Studio: https://ai.studio/apps/83290a4a-8f7f-4dbd-a3cf-52df8
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Prerequisites:** Node.js
 
+1. Install dependencies: `npm install`
+2. Скопируйте [.env.example](.env.example) в `.env` и укажите `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` (Supabase → Settings → API).
+3. (Необязательно) Для сценариев AI Studio можно задать `GEMINI_API_KEY` в `.env.local`.
+4. Запуск: `npm run dev`
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Деплой на GitHub Pages (`/saas-fit/`)
+
+Проект настроен на подкаталог: в production `vite` использует `base: '/saas-fit/'` (см. `vite.config.ts`). После `npm run build` в `dist/index.html` пути к скриптам и стилям вида `/saas-fit/assets/...`.
+
+1. **Репозиторий:** Settings → Pages → **Build and deployment** → Source: **GitHub Actions**.
+2. **Секреты для сборки:** Settings → Secrets and variables → Actions — добавьте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` (те же значения, что в `.env` для локальной разработки). Без них приложение соберётся с заглушками: интерфейс откроется, но запросы к Supabase не заработают до пересборки с переменными.
+3. Пуш в ветку `main` или `master` запускает workflow `.github/workflows/deploy-pages.yml`.
+
+Локальная проверка путей: `npm run build` и откройте `dist/index.html` — ссылки на ассеты должны начинаться с `/saas-fit/`.
