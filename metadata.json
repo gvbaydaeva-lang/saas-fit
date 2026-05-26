@@ -1,0 +1,6 @@
+{
+  "name": "SaaS CRM Studio Builder",
+  "description": "Универсальный SaaS-контроллер CRM для спортивных студий, языковых школ и детских центров с конструктором направлений.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
