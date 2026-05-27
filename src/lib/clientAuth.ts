@@ -45,12 +45,13 @@ export async function isPhoneAllowed(phone: string): Promise<boolean> {
 
 /**
  * Регистрация: реальный email для Supabase Auth + телефон в user_metadata и проверка whitelist.
+ * @returns needsEmailConfirmation — true, если Supabase не выдал сессию сразу (включено подтверждение почты).
  */
 export async function registerWithEmailPhone(
   email: string,
   phone: string,
   password: string
-): Promise<void> {
+): Promise<{ needsEmailConfirmation: boolean }> {
   const em = email.trim();
   if (!isValidEmail(em)) {
     throw new Error("Введите корректный email");
@@ -91,13 +92,16 @@ export async function registerWithEmailPhone(
     /* имя опционально */
   }
 
-  const { error } = await supabase.auth.signUp({
+  const basePath = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "");
+
+  const { data, error } = await supabase.auth.signUp({
     email: em,
     password,
     options: {
+      // После перехода из письма — на /login (там сессия подхватится из URL).
       emailRedirectTo:
         typeof window !== "undefined"
-          ? `${window.location.origin}${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "")}/login`
+          ? `${window.location.origin}${basePath}/login`
           : undefined,
       data: {
         account_type: "client",
@@ -110,6 +114,7 @@ export async function registerWithEmailPhone(
   });
 
   if (error) throw error;
+  return { needsEmailConfirmation: !data.session };
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<void> {

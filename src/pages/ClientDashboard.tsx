@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import {
@@ -38,12 +38,31 @@ export default function ClientDashboard() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      setAuthLoading(false);
-      if (u) void loadData(u.id);
-    });
+    let cancelled = false;
+
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (cancelled) return;
+        const u = session?.user ?? null;
+        setUser(u);
+        if (u) void loadData(u.id);
+        else {
+          setProfile(null);
+          setVisits([]);
+        }
+      })
+      .catch((err) => {
+        console.error("[FitCRM] dashboard getSession:", err);
+        if (!cancelled) {
+          setUser(null);
+          setProfile(null);
+          setVisits([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAuthLoading(false);
+      });
 
     const {
       data: { subscription },
@@ -51,13 +70,24 @@ export default function ClientDashboard() {
       const u = session?.user ?? null;
       setUser(u);
       if (u) void loadData(u.id);
+      else {
+        setProfile(null);
+        setVisits([]);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [loadData]);
 
   const handleCheckIn = async () => {
-    if (!user) return;
+    if (!user) {
+      setMessage({ text: "Войдите, чтобы отметить визит.", tone: "err" });
+      navigate("/login");
+      return;
+    }
     setLoading(true);
     setMessage(null);
     try {
@@ -95,34 +125,55 @@ export default function ClientDashboard() {
             <h1 className="text-lg font-semibold">Личный кабинет</h1>
             <p className="text-xs text-[#86868b]">Клиент студии</p>
           </div>
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="text-sm text-[#0071e3] font-medium"
-          >
-            Выйти
-          </button>
+          <div className="flex items-center gap-3">
+            <Link to="/" className="text-xs text-[#86868b] hover:text-[#1d1d1f]">
+              CRM
+            </Link>
+            {user ? (
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="text-sm text-[#0071e3] font-medium"
+              >
+                Выйти
+              </button>
+            ) : (
+              <Link to="/login" className="text-sm text-[#0071e3] font-medium">
+                Войти
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        {!user && (
+          <div className="rounded-xl bg-sky-50 border border-sky-200 text-sky-900 text-sm px-4 py-3">
+            Вы просматриваете страницу без входа. Чтобы видеть баланс, визиты и отмечаться,{" "}
+            <Link className="text-[#0071e3] font-medium underline" to="/login">
+              войдите
+            </Link>
+            .
+          </div>
+        )}
+
         <section className="bg-white rounded-2xl border border-[#d2d2d7]/60 p-5 shadow-sm">
           <p className="text-sm text-[#86868b] mb-1">Здравствуйте</p>
           <h2 className="text-2xl font-semibold tracking-tight">
-            {profile?.full_name || "Клиент"}
+            {user ? profile?.full_name || "Клиент" : "Гость"}
           </h2>
-          {profile?.phone && (
+          {user && profile?.phone && (
             <p className="text-sm text-[#515154] mt-1">{formatPhoneDisplay(profile.phone)}</p>
           )}
           <div className="mt-4 flex items-end gap-2">
             <span className="text-4xl font-bold text-[#0071e3] tabular-nums">
-              {profile?.balance ?? 0}
+              {user ? profile?.balance ?? 0 : "—"}
             </span>
             <span className="text-sm text-[#86868b] pb-1">занятий на балансе</span>
           </div>
-          {!profile && (
+          {user && !profile && (
             <p className="mt-3 text-sm text-amber-800 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
-              Профиль не найден или таблица не создана — выполните SQL-миграцию в Supabase и зарегистрируйтесь снова.
+              Профиль не найден — выполните SQL-миграцию в Supabase и зарегистрируйтесь.
             </p>
           )}
         </section>
@@ -130,14 +181,14 @@ export default function ClientDashboard() {
         <section className="bg-white rounded-2xl border border-[#d2d2d7]/60 p-5 shadow-sm">
           <button
             type="button"
-            disabled={loading || (profile?.balance ?? 0) <= 0}
+            disabled={loading || !user || (profile?.balance ?? 0) <= 0}
             onClick={() => void handleCheckIn()}
             className="w-full rounded-xl bg-[#0071e3] text-white font-semibold py-3.5 hover:bg-[#0077ed] disabled:opacity-50 transition-colors"
           >
             {loading ? "Сохранение…" : "Отметиться на занятие"}
           </button>
           <p className="text-xs text-[#86868b] mt-2 text-center leading-relaxed">
-            Добавляет запись в таблицу посещений и списывает одно занятие с баланса.
+            Сохраняет визит в Supabase и списывает занятие (только для вошедших пользователей).
           </p>
           {message && (
             <p
@@ -154,7 +205,9 @@ export default function ClientDashboard() {
 
         <section className="bg-white rounded-2xl border border-[#d2d2d7]/60 p-5 shadow-sm">
           <h3 className="font-semibold mb-3">Последние визиты</h3>
-          {visits.length === 0 ? (
+          {!user ? (
+            <p className="text-sm text-[#86868b]">Войдите, чтобы увидеть историю посещений.</p>
+          ) : visits.length === 0 ? (
             <p className="text-sm text-[#86868b]">Пока нет посещений</p>
           ) : (
             <ul className="space-y-2">
