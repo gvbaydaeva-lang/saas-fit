@@ -1,12 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginWithPhone, registerWithPhone } from "../lib/clientAuth";
+import {
+  loginWithEmail,
+  registerWithEmailPhone,
+} from "../lib/clientAuth";
 import { maskPhoneInput } from "../lib/phone";
 import { supabaseConfigured } from "../lib/supabase";
 
 export default function ClientAuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(false);
@@ -18,28 +22,54 @@ export default function ClientAuthPage() {
     e.preventDefault();
     setError("");
     setInfo("");
+
+    const em = email.trim();
+    if (!em) {
+      setError("Укажите email");
+      return;
+    }
+    if (!password.trim()) {
+      setError("Укажите пароль");
+      return;
+    }
+
     if (!supabaseConfigured) {
-      setError("Supabase не настроен: в .env укажите VITE_SUPABASE_URL и ключ (VITE_SUPABASE_ANON_KEY или VITE_SUPABASE_PUBLISHABLE_KEY).");
+      setError(
+        "Supabase не настроен: добавьте в .env (или в GitHub Secrets при сборке) VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY."
+      );
       return;
     }
-    if (mode === "register" && !consent) {
-      setError("Необходимо согласие на обработку персональных данных");
-      return;
+
+    if (mode === "register") {
+      if (!phone.trim()) {
+        setError("Укажите номер телефона");
+        return;
+      }
+      if (!consent) {
+        setError("Необходимо согласие на обработку персональных данных");
+        return;
+      }
+      if (password.length < 6) {
+        setError("Пароль должен быть не короче 6 символов");
+        return;
+      }
     }
+
     setLoading(true);
     try {
       if (mode === "register") {
-        await registerWithPhone(phone, password);
+        await registerWithEmailPhone(em, phone, password);
         setInfo(
-          "Аккаунт создан. Если в Supabase включено подтверждение email — отключите его для теста или подтвердите почту вида 79…@phone.fitcrm.local. Затем войдите."
+          "Регистрация отправлена. Если в проекте Supabase включено подтверждение почты — откройте письмо и перейдите по ссылке, затем войдите с этим же email и паролем."
         );
         setMode("login");
       } else {
-        await loginWithPhone(phone, password);
+        await loginWithEmail(em, password);
         navigate("/dashboard", { replace: true });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка авторизации";
+      const msg =
+        err instanceof Error ? err.message : "Ошибка авторизации. Проверьте данные или попробуйте позже.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -51,29 +81,47 @@ export default function ClientAuthPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-[#d2d2d7]/60 p-8">
         <h1 className="text-2xl font-semibold tracking-tight mb-1">Личный кабинет</h1>
         <p className="text-sm text-[#86868b] mb-6">
-          {mode === "login" ? "Вход по телефону и паролю" : "Регистрация только для клиентов из списка студии"}
+          {mode === "login"
+            ? "Вход по email и паролю"
+            : "Регистрация: email, телефон из списка студии и пароль"}
         </p>
 
         {!supabaseConfigured && (
           <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3">
-            Ключи Supabase не заданы. Скопируйте <code className="text-xs">.env.example</code> в{" "}
-            <code className="text-xs">.env</code>.
+            Ключи Supabase не подставлены при сборке. Скопируйте{" "}
+            <code className="text-xs">.env.example</code> → <code className="text-xs">.env</code> локально или
+            задайте секреты в GitHub Actions.
           </div>
         )}
 
         <form onSubmit={onSubmit} className="space-y-4">
           <label className="block text-sm font-medium">
-            Телефон
+            Email
             <input
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(maskPhoneInput(e.target.value))}
-              placeholder="+7 (___) ___-__-__"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               className="mt-1 w-full rounded-xl border border-[#d2d2d7] px-3 py-2.5 text-base outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
               required
             />
           </label>
+
+          {mode === "register" && (
+            <label className="block text-sm font-medium">
+              Телефон
+              <input
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(maskPhoneInput(e.target.value))}
+                placeholder="+7 (___) ___-__-__"
+                className="mt-1 w-full rounded-xl border border-[#d2d2d7] px-3 py-2.5 text-base outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+                required
+              />
+            </label>
+          )}
 
           <label className="block text-sm font-medium">
             Пароль
@@ -133,7 +181,7 @@ export default function ClientAuthPage() {
         </button>
 
         <p className="mt-6 text-center text-xs text-[#86868b]">
-          Открывайте главную страницу приложения — там же форма входа после выхода.
+          Главная перенаправляет на вход или кабинет в зависимости от сессии.
         </p>
       </div>
     </div>

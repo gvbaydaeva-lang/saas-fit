@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { normalizePhone, phoneToAuthEmail } from "./phone";
+import { normalizePhone } from "./phone";
 
 export type ProfileRow = {
   id: string;
@@ -25,6 +25,11 @@ export type PaymentRow = {
 /** QR на ресепшене: клиент сканирует этот код перед отметкой. */
 export const CHECKIN_QR_PAYLOAD = "fitcrm-client-checkin";
 
+function isValidEmail(email: string): boolean {
+  const t = email.trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+}
+
 export async function isPhoneAllowed(phone: string): Promise<boolean> {
   const { data, error } = await supabase.rpc("is_phone_in_customers_db", {
     p_phone: normalizePhone(phone),
@@ -32,16 +37,24 @@ export async function isPhoneAllowed(phone: string): Promise<boolean> {
   if (error) {
     console.warn("[FitCRM] is_phone_in_customers_db:", error.message);
     throw new Error(
-      "Не удалось проверить номер. Убедитесь, что миграция 001_client_cabinet.sql выполнена в Supabase."
+      "Не удалось проверить номер. Убедитесь, что в Supabase выполнена миграция (RPC is_phone_in_customers_db)."
     );
   }
   return Boolean(data);
 }
 
-export async function registerWithPhone(
+/**
+ * Регистрация: реальный email для Supabase Auth + телефон в user_metadata и проверка whitelist.
+ */
+export async function registerWithEmailPhone(
+  email: string,
   phone: string,
   password: string
 ): Promise<void> {
+  const em = email.trim();
+  if (!isValidEmail(em)) {
+    throw new Error("Введите корректный email");
+  }
   const normalized = normalizePhone(phone);
   if (normalized.length !== 11) {
     throw new Error("Введите корректный номер телефона");
@@ -50,24 +63,47 @@ export async function registerWithPhone(
     throw new Error("Пароль должен быть не короче 6 символов");
   }
 
-  const allowed = await isPhoneAllowed(normalized);
+  let allowed: boolean;
+  try {
+    allowed = await isPhoneAllowed(normalized);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Ошибка проверки телефона";
+    throw new Error(msg);
+  }
+
   if (!allowed) {
     throw new Error(
       "Этот номер не в списке клиентов студии. Обратитесь к администратору."
     );
   }
 
-  const { data: fullName } = await supabase.rpc("get_customer_name_by_phone", {
-    p_phone: normalized,
-  });
+  let fullName: unknown;
+  try {
+    const { data, error } = await supabase.rpc("get_customer_name_by_phone", {
+      p_phone: normalized,
+    });
+    if (error) {
+      console.warn("[FitCRM] get_customer_name_by_phone:", error.message);
+    } else {
+      fullName = data;
+    }
+  } catch {
+    /* имя опционально */
+  }
 
   const { error } = await supabase.auth.signUp({
-    email: phoneToAuthEmail(normalized),
+    email: em,
     password,
     options: {
+      emailRedirectTo:
+        typeof window !== "undefined"
+          ? `${window.location.origin}${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "")}/login`
+          : undefined,
       data: {
         account_type: "client",
         phone: normalized,
+        phone_raw: phone.trim(),
+        email: em,
         full_name: typeof fullName === "string" ? fullName : "",
       },
     },
@@ -76,13 +112,13 @@ export async function registerWithPhone(
   if (error) throw error;
 }
 
-export async function loginWithPhone(
-  phone: string,
-  password: string
-): Promise<void> {
-  const normalized = normalizePhone(phone);
+export async function loginWithEmail(email: string, password: string): Promise<void> {
+  const em = email.trim();
+  if (!em) {
+    throw new Error("Укажите email");
+  }
   const { error } = await supabase.auth.signInWithPassword({
-    email: phoneToAuthEmail(normalized),
+    email: em,
     password,
   });
   if (error) throw error;

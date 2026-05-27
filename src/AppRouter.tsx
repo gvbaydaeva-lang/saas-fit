@@ -19,14 +19,29 @@ function useSession(): { ready: boolean; session: Session | null } {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-      setReady(true);
-    });
+    let cancelled = false;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setSession(data.session ?? null);
+      })
+      .catch((err) => {
+        console.error("[FitCRM] getSession:", err);
+        if (!cancelled) setSession(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
       setSession(s);
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   return { ready, session };
