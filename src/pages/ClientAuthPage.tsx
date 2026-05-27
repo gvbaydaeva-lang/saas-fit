@@ -19,7 +19,7 @@ export default function ClientAuthPage() {
     setError("");
     setInfo("");
     if (!supabaseConfigured) {
-      setError("Supabase не настроен: добавьте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env");
+      setError("Supabase не настроен: в .env укажите VITE_SUPABASE_URL и ключ (VITE_SUPABASE_ANON_KEY или VITE_SUPABASE_PUBLISHABLE_KEY).");
       return;
     }
     if (mode === "register" && !consent) {

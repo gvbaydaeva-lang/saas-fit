@@ -29,9 +29,9 @@ export default function SupabaseConfigScreen() {
           Supabase не подключён
         </h1>
         <p style={{ fontSize: 14, lineHeight: 1.55, color: "#515154", marginBottom: 16 }}>
-          В собранном сайте нет переменных <code>VITE_SUPABASE_URL</code> и{" "}
-          <code>VITE_SUPABASE_ANON_KEY</code>. Добавьте их в GitHub и пересоберите
-          проект через Actions.
+          В собранном сайте не встроены <code>VITE_SUPABASE_URL</code> или ключ клиента{" "}
+          (<code>VITE_SUPABASE_ANON_KEY</code> / <code>VITE_SUPABASE_PUBLISHABLE_KEY</code>). Добавьте секреты в GitHub и пересоберите проект через Actions (ключи вида{" "}
+          <code className="text-xs">sb_publishable_…</code> поддерживаются).
         </p>
         <ol style={{ fontSize: 14, lineHeight: 1.6, color: "#515154", paddingLeft: 20 }}>
           <li>
@@ -42,7 +42,7 @@ export default function SupabaseConfigScreen() {
             <code>VITE_SUPABASE_URL</code> — Project URL из Supabase (Settings → API)
           </li>
           <li>
-            <code>VITE_SUPABASE_ANON_KEY</code> — anon public key из Supabase
+            <code>VITE_SUPABASE_ANON_KEY</code> или <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> — publishable / anon из Supabase (Settings → API keys)
           </li>
           <li>
             <strong>Settings → Pages</strong> → Source: <strong>GitHub Actions</strong>

@@ -1,7 +1,9 @@
 # Деплой на GitHub Pages (base /saas-fit/, vite.config.ts).
 #
 # Секреты для npm run build (Settings → Secrets and variables → Actions):
-#   — Рекомендуется: Repository secrets: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+#   — Рекомендуется: VITE_SUPABASE_URL + ключ (одно из имён):
+#       VITE_SUPABASE_ANON_KEY (в значении — legacy anon или sb_publishable_…)
+#       или VITE_SUPABASE_PUBLISHABLE_KEY (если завели отдельный secret)
 #   — Либо: Secrets в Environment "github-pages" (тогда job build ОБЯЗАН иметь environment ниже)
 #
 # Pages: Settings → Pages → Source: GitHub Actions
@@ -31,7 +33,7 @@ jobs:
 
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       - name: Checkout
@@ -50,7 +52,7 @@ jobs:
             exit 1
           fi
           if [ -z "${VITE_SUPABASE_ANON_KEY}" ]; then
-            echo "::error::Пустой VITE_SUPABASE_ANON_KEY. Добавьте Repository secret ИЛИ secret в Environment github-pages (имя в точности: VITE_SUPABASE_ANON_KEY)."
+            echo "::error::Пустой ключ. Задайте secret VITE_SUPABASE_ANON_KEY или VITE_SUPABASE_PUBLISHABLE_KEY."
             exit 1
           fi
           echo "OK: переменные заданы (длина URL: ${#VITE_SUPABASE_URL} символов)"
@@ -63,7 +65,7 @@ jobs:
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Проверить артефакты и встраивание URL в бандл
         run: |
