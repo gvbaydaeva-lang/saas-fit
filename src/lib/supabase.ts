@@ -1,17 +1,28 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const rawSupabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
-const rawSupabaseAnon = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
-
-export const SUPABASE_URL = rawSupabaseUrl;
-export const SUPABASE_ANON_KEY = rawSupabaseAnon;
+export const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
+export const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
 
 export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-if (!supabaseConfigured) {
-  throw new Error(
-    "[FitCRM] Supabase не настроен. Задайте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env (локально) или передайте их в GitHub Actions перед npm run build."
+let client: SupabaseClient | null = null;
+
+if (supabaseConfigured) {
+  client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else if (import.meta.env.DEV) {
+  console.warn(
+    "[FitCRM] Нет VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. Создайте .env по .env.example."
   );
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/** Клиент Supabase; null, если ключи не были встроены при сборке. */
+export const supabase = client as SupabaseClient;
+
+export function requireSupabase(): SupabaseClient {
+  if (!client) {
+    throw new Error(
+      "Supabase не настроен: задайте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в GitHub Actions Secrets перед npm run build."
+    );
+  }
+  return client;
+}
