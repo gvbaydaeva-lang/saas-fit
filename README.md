@@ -22,8 +22,10 @@ View your app in AI Studio: https://ai.studio/apps/83290a4a-8f7f-4dbd-a3cf-52df8
 Проект настроен на подкаталог: в production `vite` использует `base: '/saas-fit/'` (см. `vite.config.ts`). После `npm run build` в `dist/index.html` пути к скриптам и стилям вида `/saas-fit/assets/...`.
 
 1. **Репозиторий:** Settings → Pages → **Build and deployment** → Source: **GitHub Actions**.
-2. **Секреты для сборки:** Settings → Secrets and variables → Actions — добавьте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` (те же значения, что в `.env` для локальной разработки). Без них приложение соберётся с заглушками: интерфейс откроется, но запросы к Supabase не заработают до пересборки с переменными.
+2. **Секреты / переменные для сборки:** Settings → Secrets and variables → Actions. Задайте **Secrets** (или **Variables**) с именами `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY`. Workflow подставляет сначала Secrets, при отсутствии — Variables. Без них шаг сборки **завершится с ошибкой**, чтобы в бандл не попали пустые значения.
 3. Пуш в ветку `main` или `master` запускает workflow `.github/workflows/deploy-pages.yml`.
+
+4. После сборки workflow копирует `index.html` → `404.html`, чтобы прямые ссылки вида `/saas-fit/login` не отдавали **404** (SPA на GitHub Pages).
 
 Локальная проверка путей: `npm run build` и откройте `dist/index.html` — ссылки на ассеты должны начинаться с `/saas-fit/`.
 
