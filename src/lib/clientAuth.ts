@@ -30,6 +30,14 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
 }
 
+
+function buildEmailRedirectTo(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const base = String(import.meta.env.BASE_URL || "/").trim();
+  const baseWithSlashes = `/${base.replace(/^\/+|\/+$/g, "")}/`;
+  return new URL("login", `${window.location.origin}${baseWithSlashes}`).toString();
+}
+
 export async function isPhoneAllowed(phone: string): Promise<boolean> {
   const { data, error } = await supabase.rpc("is_phone_in_customers_db", {
     p_phone: normalizePhone(phone),
@@ -92,17 +100,12 @@ export async function registerWithEmailPhone(
     /* имя опционально */
   }
 
-  const basePath = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "");
-
   const { data, error } = await supabase.auth.signUp({
     email: em,
     password,
     options: {
       // После перехода из письма — на /login (там сессия подхватится из URL).
-      emailRedirectTo:
-        typeof window !== "undefined"
-          ? `${window.location.origin}${basePath}/login`
-          : undefined,
+      emailRedirectTo: buildEmailRedirectTo(),
       data: {
         account_type: "client",
         phone: normalized,

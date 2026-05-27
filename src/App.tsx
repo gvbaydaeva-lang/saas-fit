@@ -942,10 +942,18 @@ export default function App() {
         });
         if (error) throw error;
       } else {
+        const base = String((import.meta as any).env.BASE_URL || "/").trim();
+        const baseWithSlashes = `/${base.replace(/^\/+|\/+$/g, "")}/`;
+        const emailRedirectTo =
+          typeof window !== "undefined"
+            ? new URL("login", `${window.location.origin}${baseWithSlashes}`).toString()
+            : undefined;
+
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password: password.trim(),
           options: {
+            emailRedirectTo,
             data: {
               phone_number: phone,
               created_at: new Date().toISOString(),
