@@ -3,17 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 const rawSupabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
 const rawSupabaseAnon = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
 
-const FALLBACK_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+export const SUPABASE_URL = rawSupabaseUrl;
+export const SUPABASE_ANON_KEY = rawSupabaseAnon;
 
-export const SUPABASE_URL = rawSupabaseUrl || FALLBACK_PUBLIC_SUPABASE_URL;
-export const SUPABASE_ANON_KEY =
-  rawSupabaseAnon || "sb_publishable_dummy.missing-env-build-time";
-
-export const supabaseConfigured = Boolean(rawSupabaseUrl && rawSupabaseAnon);
+export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 if (!supabaseConfigured) {
-  console.warn(
-    "[FitCRM] Задайте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env (см. .env.example)."
+  // Важно: не делаем никаких запросов в заглушечные домены.
+  // В GitHub Pages переменные должны быть заданы на этапе сборки (Vite встраивает VITE_* в бандл).
+  throw new Error(
+    "[FitCRM] Supabase не настроен. Задайте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env (локально) или в GitHub Actions Secrets/Variables (для npm run build)."
   );
 }
 
