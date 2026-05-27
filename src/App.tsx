@@ -32,30 +32,10 @@ import {
   Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { createClient } from "@supabase/supabase-js";
 import { Html5Qrcode } from "html5-qrcode";
 import QRCode from "qrcode";
-
-const rawSupabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
-const rawSupabaseAnon = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
-
-/**
- * Реальные значения только из `.env`/CI при `vite build`.
- * Если переменные пустые, Supabase SDK бросает при инициализации — это давало белый экран на GitHub Pages без secrets.
- */
-const FALLBACK_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-
-export const SUPABASE_URL = rawSupabaseUrl || FALLBACK_PUBLIC_SUPABASE_URL;
-export const SUPABASE_ANON_KEY =
-  rawSupabaseAnon || "sb_publishable_dummy.missing-env-build-time";
-
-if (!rawSupabaseUrl || !rawSupabaseAnon) {
-  console.warn(
-    "[FitCRM] Задайте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в секретах/variables GitHub Actions (или в .env при сборке). Сейчас подставлены заглушки: UI открывается, облако не работает до пересборки с ключами."
-  );
-}
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { createClient } from "@supabase/supabase-js";
+import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from "./lib/supabase";
 
 const SK = "fitcrm_pro_v3_supabase";
 

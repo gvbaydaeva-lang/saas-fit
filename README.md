@@ -26,3 +26,13 @@ View your app in AI Studio: https://ai.studio/apps/83290a4a-8f7f-4dbd-a3cf-52df8
 3. Пуш в ветку `main` или `master` запускает workflow `.github/workflows/deploy-pages.yml`.
 
 Локальная проверка путей: `npm run build` и откройте `dist/index.html` — ссылки на ассеты должны начинаться с `/saas-fit/`.
+
+## Личный кабинет клиента
+
+1. **SQL:** в Supabase → SQL Editor выполните файл [supabase/migrations/001_client_cabinet.sql](supabase/migrations/001_client_cabinet.sql).
+2. **Whitelist:** добавьте телефон клиента в `customers_db` (пример в конце SQL-файла).
+3. **Баланс:** после регистрации пополните `profiles.balance` (или задайте `initial_balance` в metadata при регистрации через SQL/админку).
+4. **Маршруты:** `/login` — вход по телефону и паролю; `/dashboard` — кабинет (на GitHub Pages: `/saas-fit/login`, `/saas-fit/dashboard`).
+5. **QR на ресепшене:** текст кода `fitcrm-client-checkin` (клиент сканирует его при отметке).
+
+**Auth:** Supabase Email provider; логин — синтетический email `79XXXXXXXXX@phone.fitcrm.local`. Для теста можно отключить подтверждение email в Authentication → Providers → Email.
