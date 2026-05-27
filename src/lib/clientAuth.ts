@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { normalizePhone } from "./phone";
+import { getEmailRedirectLoginUrl } from "./resolveAppUrl";
 
 export type ProfileRow = {
   id: string;
@@ -30,13 +31,6 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
 }
 
-
-function buildEmailRedirectTo(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  const base = String(import.meta.env.BASE_URL || "/").trim();
-  const baseWithSlashes = `/${base.replace(/^\/+|\/+$/g, "")}/`;
-  return new URL("login", `${window.location.origin}${baseWithSlashes}`).toString();
-}
 
 export async function isPhoneAllowed(phone: string): Promise<boolean> {
   const { data, error } = await supabase.rpc("is_phone_in_customers_db", {
@@ -105,7 +99,7 @@ export async function registerWithEmailPhone(
     password,
     options: {
       // После перехода из письма — на /login (там сессия подхватится из URL).
-      emailRedirectTo: buildEmailRedirectTo(),
+      emailRedirectTo: getEmailRedirectLoginUrl(),
       data: {
         account_type: "client",
         phone: normalized,

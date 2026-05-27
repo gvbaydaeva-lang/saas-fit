@@ -4,9 +4,9 @@ import App from "./App";
 import ClientAuthPage from "./pages/ClientAuthPage";
 import ClientDashboard from "./pages/ClientDashboard";
 import PendingVerificationPage from "./pages/PendingVerificationPage";
+import { getRouterBasename } from "./lib/resolveAppUrl";
 
-const basename =
-  (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || undefined;
+const basename = getRouterBasename();
 
 export default function AppRouter() {
   return (

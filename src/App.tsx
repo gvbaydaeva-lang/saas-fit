@@ -41,6 +41,7 @@ import {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
 } from "./lib/supabase";
+import { getEmailRedirectLoginUrl } from "./lib/resolveAppUrl";
 
 export { supabase };
 
@@ -942,12 +943,7 @@ export default function App() {
         });
         if (error) throw error;
       } else {
-        const base = String((import.meta as any).env.BASE_URL || "/").trim();
-        const baseWithSlashes = `/${base.replace(/^\/+|\/+$/g, "")}/`;
-        const emailRedirectTo =
-          typeof window !== "undefined"
-            ? new URL("login", `${window.location.origin}${baseWithSlashes}`).toString()
-            : undefined;
+        const emailRedirectTo = getEmailRedirectLoginUrl();
 
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
