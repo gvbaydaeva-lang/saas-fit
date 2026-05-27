@@ -1,10 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Html5Qrcode } from "html5-qrcode";
+import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import {
-  CHECKIN_QR_PAYLOAD,
   fetchMyProfile,
   fetchMyVisits,
   recordCheckIn,
@@ -12,8 +10,6 @@ import {
   type VisitRow,
 } from "../lib/clientAuth";
 import { formatPhoneDisplay } from "../lib/phone";
-
-const QR_READER_ID = "client-checkin-qr-reader";
 
 function fmtDateTime(iso: string) {
   try {
@@ -34,8 +30,6 @@ export default function ClientDashboard() {
   const [visits, setVisits] = useState<VisitRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
-  const [qrOpen, setQrOpen] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const loadData = useCallback(async (uid: string) => {
     const [p, v] = await Promise.all([fetchMyProfile(uid), fetchMyVisits(uid)]);
@@ -43,7 +37,26 @@ export default function ClientDashboard() {
     setVisits(v);
   }, []);
 
-  const handleCheckIn = useCallback(async () => {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      setAuthLoading(false);
+      if (u) void loadData(u.id);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) void loadData(u.id);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [loadData]);
+
+  const handleCheckIn = async () => {
     if (!user) return;
     setLoading(true);
     setMessage(null);
@@ -59,74 +72,7 @@ export default function ClientDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, loadData]);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      setAuthLoading(false);
-      if (!u) navigate("/login", { replace: true });
-      else void loadData(u.id);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (!u) navigate("/login", { replace: true });
-      else void loadData(u.id);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [loadData, navigate]);
-
-  useEffect(() => {
-    if (!qrOpen || !user) {
-      if (scannerRef.current) {
-        void scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-        scannerRef.current = null;
-      }
-      return;
-    }
-
-    const scanner = new Html5Qrcode(QR_READER_ID);
-    scannerRef.current = scanner;
-
-    scanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 8, qrbox: { width: 240, height: 240 } },
-        async (decoded) => {
-          const t = decoded.trim();
-          if (t !== CHECKIN_QR_PAYLOAD) {
-            setMessage({
-              text: "Неверный QR-код. Отсканируйте код на стойке студии.",
-              tone: "err",
-            });
-            return;
-          }
-          await scanner.stop().catch(() => {});
-          setQrOpen(false);
-          await handleCheckIn();
-        },
-        () => {}
-      )
-      .catch(() => {
-        setMessage({
-          text: "Не удалось открыть камеру. Разрешите доступ или используйте HTTPS.",
-          tone: "err",
-        });
-        setQrOpen(false);
-      });
-
-    return () => {
-      void scanner.stop().catch(() => {});
-      scanner.clear();
-    };
-  }, [qrOpen, user, handleCheckIn]);
+  };
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -176,8 +122,7 @@ export default function ClientDashboard() {
           </div>
           {!profile && (
             <p className="mt-3 text-sm text-amber-800 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
-              Профиль не найден. Выполните SQL-миграцию и перерегистрируйтесь с типом account_type
-              client.
+              Профиль не найден или таблица не создана — выполните SQL-миграцию в Supabase и зарегистрируйтесь снова.
             </p>
           )}
         </section>
@@ -186,15 +131,13 @@ export default function ClientDashboard() {
           <button
             type="button"
             disabled={loading || (profile?.balance ?? 0) <= 0}
-            onClick={() => setQrOpen(true)}
+            onClick={() => void handleCheckIn()}
             className="w-full rounded-xl bg-[#0071e3] text-white font-semibold py-3.5 hover:bg-[#0077ed] disabled:opacity-50 transition-colors"
           >
-            {loading ? "Сохранение…" : "Отметиться"}
+            {loading ? "Сохранение…" : "Отметиться на занятие"}
           </button>
           <p className="text-xs text-[#86868b] mt-2 text-center leading-relaxed">
-            Откроется камера: отсканируйте QR на ресепшене (
-            <code className="text-[10px]">{CHECKIN_QR_PAYLOAD}</code>
-            ). Администратор может сгенерировать QR в CRM.
+            Добавляет запись в таблицу посещений и списывает одно занятие с баланса.
           </p>
           {message && (
             <p
@@ -227,33 +170,7 @@ export default function ClientDashboard() {
             </ul>
           )}
         </section>
-
-        <Link to="/" className="block text-center text-sm text-[#86868b] hover:text-[#1d1d1f] py-2">
-          ← Вернуться в CRM студии
-        </Link>
       </main>
-
-      {qrOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-          onClick={() => setQrOpen(false)}
-        >
-          <div
-            className="bg-white rounded-2xl p-4 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-semibold mb-2">Сканирование QR</h3>
-            <div id={QR_READER_ID} className="rounded-xl overflow-hidden min-h-[260px] bg-black" />
-            <button
-              type="button"
-              className="mt-3 w-full py-2.5 rounded-xl border border-[#d2d2d7] text-sm font-medium"
-              onClick={() => setQrOpen(false)}
-            >
-              Отмена
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

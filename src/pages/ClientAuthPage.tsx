@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { loginWithPhone, registerWithPhone } from "../lib/clientAuth";
 import { maskPhoneInput } from "../lib/phone";
 import { supabaseConfigured } from "../lib/supabase";
@@ -132,9 +132,9 @@ export default function ClientAuthPage() {
           {mode === "login" ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Войти"}
         </button>
 
-        <Link to="/" className="mt-6 block text-center text-sm text-[#86868b] hover:text-[#1d1d1f]">
-          ← CRM студии
-        </Link>
+        <p className="mt-6 text-center text-xs text-[#86868b]">
+          Открывайте главную страницу приложения — там же форма входа после выхода.
+        </p>
       </div>
     </div>
   );

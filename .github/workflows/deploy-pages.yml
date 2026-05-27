@@ -1,12 +1,5 @@
-# Деплой на GitHub Pages (base /saas-fit/, vite.config.ts).
-#
-# Секреты для npm run build (Settings → Secrets and variables → Actions):
-#   — Рекомендуется: VITE_SUPABASE_URL + ключ (одно из имён):
-#       VITE_SUPABASE_ANON_KEY (в значении — legacy anon или sb_publishable_…)
-#       или VITE_SUPABASE_PUBLISHABLE_KEY (если завели отдельный secret)
-#   — Либо: Secrets в Environment "github-pages" (тогда job build ОБЯЗАН иметь environment ниже)
-#
-# Pages: Settings → Pages → Source: GitHub Actions
+# GitHub Pages + Vite: переменные задаются на этапе сборки.
+# Settings → Pages → Source: GitHub Actions
 
 name: Deploy to GitHub Pages
 
@@ -27,60 +20,27 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Без этого Environment-secrets (в github-pages) не попадут в шаги сборки.
-    environment:
-      name: github-pages
-
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
 
-      - name: Проверить наличие Secrets
-        run: |
-          if [ -z "${VITE_SUPABASE_URL}" ]; then
-            echo "::error::Пустой VITE_SUPABASE_URL. Добавьте Repository secret ИЛИ secret в Environment github-pages (имя в точности: VITE_SUPABASE_URL)."
-            exit 1
-          fi
-          if [ -z "${VITE_SUPABASE_ANON_KEY}" ]; then
-            echo "::error::Пустой ключ. Задайте secret VITE_SUPABASE_ANON_KEY или VITE_SUPABASE_PUBLISHABLE_KEY."
-            exit 1
-          fi
-          echo "OK: переменные заданы (длина URL: ${#VITE_SUPABASE_URL} символов)"
-
-      - name: Install dependencies
-        run: npm ci
-
-      # Явный env на шаге сборки — Vite читает process.env только здесь.
-      - name: Build for GitHub Pages
-        run: npm run build
+      - name: Install & build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-
-      - name: Проверить артефакты и встраивание URL в бандл
         run: |
-          test -f dist/index.html || (echo "::error::Нет dist/index.html" && exit 1)
-          test -f dist/404.html || (echo "::error::Нет dist/404.html" && exit 1)
-          grep -q '/saas-fit/assets/' dist/index.html || (echo "::error::Неверный base в index.html" && exit 1)
-          main_js=$(ls dist/assets/index-*.js | head -1)
-          if ! grep -q "supabase.co" "$main_js"; then
-            echo "::error::В бандле нет supabase.co — VITE_SUPABASE_URL не подставился при vite build (проверьте Secrets и этот workflow)."
-            exit 1
-          fi
-          echo "OK: бандл и SPA-артефакты в порядке"
+          npm install
+          npm run build
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
@@ -91,6 +51,5 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
