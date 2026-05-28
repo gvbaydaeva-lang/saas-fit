@@ -27,7 +27,8 @@ import {
   Zap,
   ShieldAlert,
   History,
-  Clock
+  Clock,
+  MessageSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@supabase/supabase-js";
@@ -110,6 +111,11 @@ const getColor = (d: string) => {
   return palette[Math.abs(hash) % palette.length];
 };
 
+interface StudentPaymentEntry {
+  date: string;
+  amount: number;
+}
+
 interface Student {
   id: number;
   name: string;
@@ -122,6 +128,11 @@ interface Student {
   payment: string;
   visits: number;
   direction: string;
+  parent_name: string;
+  parent_phone: string;
+  last_payment_amount: number;
+  last_payment_date: string;
+  payment_history?: StudentPaymentEntry[];
 }
 
 interface Teacher {
@@ -190,6 +201,58 @@ function isAlmost(c: Student) {
   if (c.abon === "count" && c.count > 0 && c.count < 3) return true;
   if (c.until) { const d = new Date(c.until); d.setHours(0,0,0,0); const diff = Math.ceil((d.getTime()-today().getTime())/86400000); if (diff>=0&&diff<3) return true; }
   return false;
+}
+
+function normalizeStudent(raw: Partial<Student> & { id: number }): Student {
+  const payment_history = Array.isArray(raw.payment_history)
+    ? raw.payment_history
+        .map((p) => ({ date: String(p.date || ""), amount: Number(p.amount) || 0 }))
+        .filter((p) => p.date)
+    : undefined;
+  const lastAmt = Number(raw.last_payment_amount);
+  const legacySum = Number(raw.sum) || 0;
+  const lastDate =
+    raw.last_payment_date != null && String(raw.last_payment_date).trim() !== ""
+      ? String(raw.last_payment_date)
+      : "";
+  return {
+    id: raw.id,
+    name: raw.name ?? "",
+    phone: raw.phone ?? "",
+    classType: raw.classType ?? "group",
+    abon: raw.abon ?? "count",
+    count: Number(raw.count) || 0,
+    until: raw.until ?? "",
+    sum: legacySum,
+    payment: raw.payment ?? "paid",
+    visits: Number(raw.visits) || 0,
+    direction: raw.direction ?? "",
+    parent_name: raw.parent_name != null ? String(raw.parent_name) : "",
+    parent_phone: raw.parent_phone != null ? String(raw.parent_phone) : "",
+    last_payment_amount: Number.isFinite(lastAmt) ? lastAmt : legacySum,
+    last_payment_date: lastDate,
+    payment_history,
+  };
+}
+
+/** Просрочена дата оплаты (срок следующего платежа) или долг / истёкший абонемент */
+function isPaymentOverdue(c: Student) {
+  if (c.payment === "debt") return true;
+  if (isExpired(c)) return true;
+  if (!c.last_payment_date) return false;
+  const d = new Date(c.last_payment_date);
+  d.setHours(0, 0, 0, 0);
+  return d < today();
+}
+
+function getPaymentHistory(c: Student): StudentPaymentEntry[] {
+  if (c.payment_history?.length) {
+    return [...c.payment_history].sort((a, b) => b.date.localeCompare(a.date));
+  }
+  if (c.last_payment_date && c.last_payment_amount > 0) {
+    return [{ date: c.last_payment_date, amount: c.last_payment_amount }];
+  }
+  return [];
 }
 
 const getDefaultDirections = (type: string): string[] => {
@@ -265,11 +328,11 @@ function seed(): DB {
   const near = new Date(); near.setDate(near.getDate()+2); const nd = near.toISOString().split("T")[0];
   return {
     students: [
-      {id:b+1,name:"Анна Смирнова",phone:"+7 (916) 123-45-67",classType:"group",abon:"count",count:8,until:fd,sum:3500,payment:"paid",visits:2,direction:"Йога"},
-      {id:b+2,name:"Игорь Петров",phone:"+7 (903) 987-65-43",classType:"group",abon:"count",count:2,until:nd,sum:2800,payment:"paid",visits:8,direction:"Фитнес"},
-      {id:b+3,name:"Мария Козлова",phone:"+7 (926) 555-00-11",classType:"individual",abon:"unlim",count:999,until:fd,sum:5000,payment:"debt",visits:5,direction:"Растяжка"},
-      {id:b+4,name:"Дмитрий Волков",phone:"+7 (999) 222-33-44",classType:"group",abon:"count",count:0,until:pd,sum:1500,payment:"paid",visits:10,direction:"Бокс"},
-      {id:b+5,name:"Светлана Орлова",phone:"+7 (912) 444-55-66",classType:"individual",abon:"count",count:5,until:fd,sum:4500,payment:"paid",visits:3,direction:"Пилатес"},
+      {id:b+1,name:"Анна Смирнова",phone:"+7 (916) 123-45-67",classType:"group",abon:"count",count:8,until:fd,sum:3500,payment:"paid",visits:2,direction:"Йога",parent_name:"Ольга Смирнова",parent_phone:"+7 (916) 111-22-33",last_payment_amount:3500,last_payment_date:fd,payment_history:[{date:fd,amount:3500},{date:pd,amount:3200}]},
+      {id:b+2,name:"Игорь Петров",phone:"+7 (903) 987-65-43",classType:"group",abon:"count",count:2,until:nd,sum:2800,payment:"paid",visits:8,direction:"Фитнес",parent_name:"Сергей Петров",parent_phone:"+7 (903) 444-55-66",last_payment_amount:2800,last_payment_date:nd,payment_history:[{date:nd,amount:2800}]},
+      {id:b+3,name:"Мария Козлова",phone:"+7 (926) 555-00-11",classType:"individual",abon:"unlim",count:999,until:fd,sum:5000,payment:"debt",visits:5,direction:"Растяжка",parent_name:"Елена Козлова",parent_phone:"+7 (926) 777-88-99",last_payment_amount:5000,last_payment_date:pd,payment_history:[{date:pd,amount:5000}]},
+      {id:b+4,name:"Дмитрий Волков",phone:"+7 (999) 222-33-44",classType:"group",abon:"count",count:0,until:pd,sum:1500,payment:"paid",visits:10,direction:"Бокс",parent_name:"Андрей Волков",parent_phone:"+7 (999) 333-44-55",last_payment_amount:1500,last_payment_date:pd,payment_history:[{date:pd,amount:1500}]},
+      {id:b+5,name:"Светлана Орлова",phone:"+7 (912) 444-55-66",classType:"individual",abon:"count",count:5,until:fd,sum:4500,payment:"paid",visits:3,direction:"Пилатес",parent_name:"Наталья Орлова",parent_phone:"+7 (912) 555-66-77",last_payment_amount:4500,last_payment_date:fd,payment_history:[{date:fd,amount:4500},{date:pd,amount:4200}]},
     ],
     teachers: [
       {id:b+10,name:"Елена Васильева",phone:"+7 (915) 100-20-30",direction:"Йога",rate:800},
@@ -304,7 +367,7 @@ function loadData(userId?: string): DB {
       const metadataItem = rawStudents.find((s: any) => s.id === -8888);
       const actualStudents = rawStudents.filter((s: any) => s.id !== -8888);
       
-      parsed.students = actualStudents;
+      parsed.students = actualStudents.map((s: Student) => normalizeStudent(s));
       if (!parsed.team) parsed.team = metadataItem?.team || [];
       if (!parsed.expenses) parsed.expenses = metadataItem?.expenses || [];
       return parsed;
@@ -784,7 +847,7 @@ export default function App() {
         }
 
         setData({
-          students: actualStudents,
+          students: actualStudents.map((s: Student) => normalizeStudent(s)),
           teachers: Array.isArray(row.teachers) ? row.teachers : [],
           schedule: Array.isArray(row.schedule) ? row.schedule : [],
           studioType: row.studio_type || "sport",
@@ -1079,8 +1142,27 @@ export default function App() {
     }
     if(!sf.name.trim()){alert("Введите имя");return;}
     const actualDir = data.directions.includes(sf.direction) ? sf.direction : firstDir;
-    const s = {id:Date.now(),name:sf.name.trim(),phone:sf.phone.trim(),classType:sf.classType,abon:sf.abon,count:sf.abon==="count"?(parseInt(sf.count)||0):999,until:sf.until,sum:parseFloat(sf.sum)||0,payment:sf.payment,visits:0,direction:actualDir};
-    save({...data,students:[...data.students,s]});
+    const amount = parseFloat(sf.sum) || 0;
+    const payDate = sf.payment === "paid" && amount > 0 ? todayStr() : "";
+    const s = normalizeStudent({
+      id: Date.now(),
+      name: sf.name.trim(),
+      phone: sf.phone.trim(),
+      classType: sf.classType,
+      abon: sf.abon,
+      count: sf.abon === "count" ? parseInt(sf.count) || 0 : 999,
+      until: sf.until,
+      sum: amount,
+      payment: sf.payment,
+      visits: 0,
+      direction: actualDir,
+      parent_name: "",
+      parent_phone: "",
+      last_payment_amount: amount,
+      last_payment_date: payDate,
+      payment_history: payDate ? [{ date: payDate, amount }] : [],
+    });
+    save({ ...data, students: [...data.students, s] });
     setSf({name:"",phone:"",classType:"group",abon:"count",count:"10",until:todayStr(),sum:"",payment:"paid",direction:firstDir});
     setShowStudentForm(false);
   };
@@ -1530,6 +1612,7 @@ export default function App() {
             {page==="students"&&(
               <StudentPage
                 data={data}
+                save={save}
                 processStudentVisit={processStudentVisit}
                 fetchVisitsForStudent={fetchVisitsForStudent}
                 deleteStudent={deleteStudent}
@@ -1542,6 +1625,7 @@ export default function App() {
                 getColor={getColor}
                 firstDir={firstDir}
                 user={user}
+                triggerAuthModal={triggerAuthModal}
               />
             )}
 
@@ -1823,6 +1907,7 @@ export default function App() {
 
 function StudentPage({
   data,
+  save,
   processStudentVisit,
   fetchVisitsForStudent,
   deleteStudent,
@@ -1834,9 +1919,11 @@ function StudentPage({
   C,
   getColor,
   firstDir,
-  user
+  user,
+  triggerAuthModal
 }: {
   data: DB;
+  save: (d: DB) => void;
   processStudentVisit: (studentId: number, at: Date) => { ok: boolean; message: string; tone: "ok" | "warn" | "err" };
   fetchVisitsForStudent: (studentId: number) => Promise<CrmVisitRow[]>;
   deleteStudent: (id: number) => void;
@@ -1849,10 +1936,12 @@ function StudentPage({
   getColor: any;
   firstDir: string;
   user: any;
+  triggerAuthModal: (msg: string) => void;
 }) {
   const [filter, setFilter] = useState("all");
   const [studentSearch, setStudentSearch] = useState("");
   const [drawerStudent, setDrawerStudent] = useState<Student | null>(null);
+  const [drawerDraft, setDrawerDraft] = useState<Student | null>(null);
   const [drawerTab, setDrawerTab] = useState<"abo" | "visits">("abo");
   const [visitRows, setVisitRows] = useState<CrmVisitRow[]>([]);
   const [visitRowsLoading, setVisitRowsLoading] = useState(false);
@@ -1912,8 +2001,38 @@ function StudentPage({
   const currentDirSelected = directionsList.includes(sf.direction) ? sf.direction : firstDir;
 
   const openDrawer = (c: Student) => {
-    setDrawerStudent(c);
+    const normalized = normalizeStudent(c);
+    setDrawerStudent(normalized);
+    setDrawerDraft(normalized);
     setDrawerTab("abo");
+  };
+
+  const persistDrawer = () => {
+    if (!drawerStudent || !drawerDraft) return;
+    if (!user) {
+      triggerAuthModal("Чтобы сохранить карточку ученика, войдите в аккаунт");
+      return;
+    }
+    let merged = normalizeStudent({ ...drawerStudent, ...drawerDraft });
+    if (merged.last_payment_date && merged.last_payment_amount > 0) {
+      const history = [...(merged.payment_history || [])];
+      const hasSame = history.some(
+        (h) => h.date === merged.last_payment_date && h.amount === merged.last_payment_amount
+      );
+      if (!hasSame) {
+        history.unshift({ date: merged.last_payment_date, amount: merged.last_payment_amount });
+      }
+      merged = { ...merged, payment_history: history.slice(0, 20) };
+    }
+    const students = data.students.map((s) => (s.id === merged.id ? merged : s));
+    save({ ...data, students });
+    setDrawerStudent(merged);
+    setDrawerDraft(merged);
+    setToast({ msg: "Карточка ученика сохранена", tone: "ok" });
+  };
+
+  const patchDrawer = (patch: Partial<Student>) => {
+    setDrawerDraft((prev) => (prev ? { ...prev, ...patch } : prev));
   };
 
   const handleQrDecoded = (sid: number) => {
@@ -1936,15 +2055,22 @@ function StudentPage({
   };
 
   useEffect(() => {
-    if (!drawerStudent) return;
-    const exists = data.students.some(s => s.id === drawerStudent.id);
-    if (!exists) setDrawerStudent(null);
-  }, [data.students, drawerStudent?.id]);
-
-  useEffect(() => {
-    if (!drawerStudent) return;
-    const fresh = data.students.find(s => s.id === drawerStudent.id);
-    if (fresh) setDrawerStudent(fresh);
+    if (!drawerStudent) {
+      setDrawerDraft(null);
+      return;
+    }
+    const exists = data.students.some((s) => s.id === drawerStudent.id);
+    if (!exists) {
+      setDrawerStudent(null);
+      setDrawerDraft(null);
+      return;
+    }
+    const fresh = data.students.find((s) => s.id === drawerStudent.id);
+    if (fresh) {
+      const normalized = normalizeStudent(fresh);
+      setDrawerStudent(normalized);
+      setDrawerDraft(normalized);
+    }
   }, [data.students, drawerStudent?.id]);
 
   const handleQuickVisitInDrawer = () => {
@@ -2062,7 +2188,7 @@ function StudentPage({
         <Input label="Быстрый поиск" value={studentSearch} onChange={setStudentSearch} placeholder="Фамилия, имя или цифры номера телефона…" />
       </div>
 
-      <div style={{ display: "inline-flex", background: "#FAFAFA", borderRadius: 8, padding: 2, marginBottom: 16, gap: 2, maxWidth: "100%", overflowX: "auto" }}>
+      <div style={{ display: "inline-flex", background: "#F3F5F7", borderRadius: 8, padding: 3, marginBottom: 16, gap: 2, maxWidth: "100%", overflowX: "auto", border: `1px solid ${C.border}` }}>
         {[
           ["all", "Все ученики"],
           ["active", "Активные абонементы"],
@@ -2079,14 +2205,14 @@ function StudentPage({
                 padding: "6px 14px",
                 border: "none",
                 borderRadius: 6,
-                background: active ? "#3a3a3c" : "transparent",
-                color: active ? "#f5f5f7" : "#8e8e93",
+                background: active ? C.sidebar : "transparent",
+                color: active ? "#FFFFFF" : C.muted,
                 fontSize: 12,
                 fontWeight: active ? 600 : 500,
                 cursor: "pointer",
                 fontFamily: "inherit",
                 transition: "all 0.12s ease-in-out",
-                boxShadow: active ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+                boxShadow: active ? "0 1px 3px rgba(47,72,88,0.12)" : "none",
                 whiteSpace: "nowrap"
               }}
             >
@@ -2100,8 +2226,8 @@ function StudentPage({
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 360 }}>
             <thead>
-              <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#252528" }}>
-                {["Ученик", "Телефон", "Статус"].map(h => (
+              <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#F0F2F5" }}>
+                {["Ученик", "Телефон", "Оплата", "Дата оплаты", "Статус"].map(h => (
                   <th key={h} style={{ textAlign: "left", padding: "14px 16px", fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -2109,19 +2235,21 @@ function StudentPage({
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={3} style={{ textAlign: "center", padding: 40, color: C.muted, fontWeight: 500 }}>
+                  <td colSpan={5} style={{ textAlign: "center", padding: 40, color: C.muted, fontWeight: 500 }}>
                     Нет учеников в списке фильтрации
                   </td>
                 </tr>
               )}
               {filtered.map(c => {
                 const exp = isExpired(c);
+                const payOverdue = isPaymentOverdue(c);
                 const tdStyle: React.CSSProperties = {
                   padding: "12px 16px",
                   borderBottom: `1px solid ${C.border}`,
                   color: exp ? "#ff453a" : C.text,
                   verticalAlign: "middle"
                 };
+                const paymentAmount = c.last_payment_amount > 0 ? c.last_payment_amount : c.sum;
                 return (
                   <tr
                     key={c.id}
@@ -2130,7 +2258,7 @@ function StudentPage({
                       background: exp ? "rgba(255, 69, 58, 0.05)" : "transparent",
                       cursor: "pointer"
                     }}
-                    className="hover:bg-white/5 transition-colors"
+                    className="hover:bg-black/[0.02] transition-colors"
                   >
                     <td style={tdStyle}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -2139,6 +2267,12 @@ function StudentPage({
                       </div>
                     </td>
                     <td style={{ ...tdStyle, color: C.muted, fontWeight: 500 }}>{c.phone || "—"}</td>
+                    <td style={{ ...tdStyle, fontWeight: 600, color: payOverdue ? "#ff453a" : C.text }}>
+                      {paymentAmount > 0 ? fmtMoney(paymentAmount) : "—"}
+                    </td>
+                    <td style={{ ...tdStyle, color: payOverdue ? "#ff453a" : C.muted, fontWeight: 500 }}>
+                      {c.last_payment_date ? fmtDate(c.last_payment_date) : "—"}
+                    </td>
                     <td style={tdStyle}>
                       <Badge type={exp ? "expired" : isAlmost(c) ? "almost" : c.payment === "debt" ? "debt" : "active"} />
                     </td>
@@ -2196,7 +2330,7 @@ function StudentPage({
                 </button>
               </div>
 
-              <div style={{ display: "flex", gap: 4, padding: "10px 12px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
+              <div style={{ display: "flex", gap: 4, padding: "10px 12px", borderBottom: `1px solid ${C.border}`, background: "#F8F9FA" }}>
                 {([
                   ["abo", "Абонемент"],
                   ["visits", "История посещений"]
@@ -2216,8 +2350,8 @@ function StudentPage({
                         fontSize: 13,
                         fontWeight: active ? 650 : 500,
                         cursor: "pointer",
-                        background: active ? "#3a3a3c" : "transparent",
-                        color: active ? C.text : C.muted,
+                        background: active ? C.sidebar : "transparent",
+                        color: active ? "#FFFFFF" : C.muted,
                         transition: "all 0.12s"
                       }}
                     >
@@ -2228,43 +2362,125 @@ function StudentPage({
               </div>
 
               <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
-                {drawerTab === "abo" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {drawerTab === "abo" && drawerDraft && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.45 }}>
-                      Направление: <strong style={{ color: getColor(drawerStudent.direction) }}>{drawerStudent.direction}</strong>
-                      · {drawerStudent.classType === "individual" ? "Индивидуально" : "Групповое"}
-                      · Абонемент: {drawerStudent.abon === "unlim" ? "безлимит" : "по занятиям"}
+                      Направление: <strong style={{ color: getColor(drawerDraft.direction) }}>{drawerDraft.direction}</strong>
+                      · {drawerDraft.classType === "individual" ? "Индивидуально" : "Групповое"}
+                      · Абонемент: {drawerDraft.abon === "unlim" ? "безлимит" : "по занятиям"}
                     </div>
+
                     <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}>
-                        <span style={{ color: C.muted }}>Телефон</span>
-                        <span style={{ fontWeight: 600 }}>{drawerStudent.phone || "—"}</span>
+                        <span style={{ color: C.muted }}>Телефон ученика</span>
+                        <span style={{ fontWeight: 600 }}>{drawerDraft.phone || "—"}</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}>
                         <span style={{ color: C.muted }}>Осталось занятий</span>
-                        <span style={{ fontWeight: 600 }}>{drawerStudent.abon === "unlim" ? "∞" : drawerStudent.count}</span>
+                        <span style={{ fontWeight: 600 }}>{drawerDraft.abon === "unlim" ? "∞" : drawerDraft.count}</span>
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}>
-                        <span style={{ color: C.muted }}>Срок по</span>
-                        <span style={{ fontWeight: 600 }}>{fmtDate(drawerStudent.until)}</span>
+                      <div style={{ padding: "10px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                        <Input label="Срок по" type="date" value={drawerDraft.until || ""} onChange={(v) => patchDrawer({ until: v })} />
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}>
                         <span style={{ color: C.muted }}>Визитов (всего, учёт в CRM)</span>
-                        <span style={{ fontWeight: 600 }}>{drawerStudent.visits ?? 0}</span>
+                        <span style={{ fontWeight: 600 }}>{drawerDraft.visits ?? 0}</span>
                       </div>
                     </div>
+
+                    <div style={{ padding: 14, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>Информация о родителях</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <Input label="ФИО родителя" value={drawerDraft.parent_name} onChange={(v) => patchDrawer({ parent_name: v })} placeholder="Иванова Мария Петровна" />
+                        <div>
+                          <Input label="Телефон родителя" value={drawerDraft.parent_phone} onChange={(v) => patchDrawer({ parent_phone: v })} placeholder="+7 (999) 000-00-00" />
+                          <button
+                            type="button"
+                            disabled
+                            title="Скоро: связь через Mail.ru Агент (Макс)"
+                            style={{
+                              marginTop: 8,
+                              width: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 8,
+                              padding: "10px 14px",
+                              borderRadius: 8,
+                              border: `1px solid ${C.accent}`,
+                              background: "rgba(212, 167, 87, 0.12)",
+                              color: C.accent,
+                              fontSize: 13,
+                              fontWeight: 650,
+                              fontFamily: "inherit",
+                              cursor: "not-allowed",
+                              opacity: 0.92
+                            }}
+                          >
+                            <MessageSquare size={16} />
+                            Написать
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: 14, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>Последние платежи</div>
+                      {getPaymentHistory(drawerDraft).length === 0 ? (
+                        <div style={{ fontSize: 13, color: C.muted }}>Платежей пока нет</div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {getPaymentHistory(drawerDraft).slice(0, 8).map((p, idx) => (
+                            <div
+                              key={`${p.date}-${p.amount}-${idx}`}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                padding: "10px 12px",
+                                borderRadius: 8,
+                                background: "#FFFFFF",
+                                border: `1px solid ${C.border}`
+                              }}
+                            >
+                              <span style={{ fontSize: 13, color: C.muted }}>{fmtDate(p.date)}</span>
+                              <span style={{ fontSize: 13, fontWeight: 650, color: idx === 0 && isPaymentOverdue(drawerDraft) ? "#ff453a" : C.text }}>
+                                {fmtMoney(p.amount)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
+                        <Input
+                          label="Сумма последнего платежа (₽)"
+                          type="number"
+                          value={String(drawerDraft.last_payment_amount || "")}
+                          onChange={(v) => patchDrawer({ last_payment_amount: parseFloat(v) || 0, sum: parseFloat(v) || 0 })}
+                        />
+                        <Input
+                          label="Дата оплаты"
+                          type="date"
+                          value={drawerDraft.last_payment_date || ""}
+                          onChange={(v) => patchDrawer({ last_payment_date: v })}
+                        />
+                      </div>
+                    </div>
+
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>QR для пропуска</div>
                       <LiveStudentQr studentId={String(drawerStudent.id)} size={160} />
                       <div style={{ fontSize: 10, color: C.muted, marginTop: 8 }}>Отсканируйте код на ресепшене или используйте кнопку «Сканировать QR» вверху списка.</div>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <Btn onClick={persistDrawer} color="green"><Check size={15}/> Сохранить изменения</Btn>
                       <Btn onClick={handleQuickVisitInDrawer} color="blue"><CheckSquare size={15}/> Отметить визит (сейчас)</Btn>
                       <Btn
                         onClick={() => {
                           if (!drawerStudent) return;
                           const sid = drawerStudent.id;
                           setDrawerStudent(null);
+                          setDrawerDraft(null);
                           deleteStudent(sid);
                         }}
                         color="red"

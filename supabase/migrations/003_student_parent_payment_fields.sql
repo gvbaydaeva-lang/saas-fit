@@ -1,0 +1,9 @@
+-- Поля ученика в JSON-массиве crm_studios.students (дополнительные ключи в объекте):
+--   parent_name          text   — ФИО родителя
+--   parent_phone         text   — телефон родителя
+--   last_payment_amount  number — сумма последнего платежа
+--   last_payment_date    text   — дата оплаты (YYYY-MM-DD)
+--   payment_history      json   — [{ "date": "YYYY-MM-DD", "amount": number }, ...]
+--
+-- Отдельная миграция схемы не требуется: students хранится как jsonb.
+-- CRM нормализует записи при загрузке (normalizeStudent в App.tsx).
