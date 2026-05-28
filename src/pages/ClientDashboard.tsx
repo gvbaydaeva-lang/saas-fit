@@ -111,34 +111,34 @@ export default function ClientDashboard() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center text-[#86868b]">
+      <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center text-[#6F7B84]">
         Загрузка…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f]">
-      <header className="bg-white/80 backdrop-blur border-b border-[#d2d2d7]/50 sticky top-0 z-10">
+    <div className="min-h-screen bg-[#FFFFFF] text-[#333333]">
+      <header className="bg-white/80 backdrop-blur border-b border-[#E7EAEE]/50 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold">Личный кабинет</h1>
-            <p className="text-xs text-[#86868b]">Клиент студии</p>
+            <p className="text-xs text-[#6F7B84]">Клиент студии</p>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/" className="text-xs text-[#86868b] hover:text-[#1d1d1f]">
+            <Link to="/" className="text-xs text-[#6F7B84] hover:text-[#333333]">
               CRM
             </Link>
             {user ? (
               <button
                 type="button"
                 onClick={() => void logout()}
-                className="text-sm text-[#0071e3] font-medium"
+                className="text-sm text-[#D4A757] font-medium"
               >
                 Выйти
               </button>
             ) : (
-              <Link to="/login" className="text-sm text-[#0071e3] font-medium">
+              <Link to="/login" className="text-sm text-[#D4A757] font-medium">
                 Войти
               </Link>
             )}
@@ -150,15 +150,15 @@ export default function ClientDashboard() {
         {!user && (
           <div className="rounded-xl bg-sky-50 border border-sky-200 text-sky-900 text-sm px-4 py-3">
             Вы просматриваете страницу без входа. Чтобы видеть баланс, визиты и отмечаться,{" "}
-            <Link className="text-[#0071e3] font-medium underline" to="/login">
+            <Link className="text-[#D4A757] font-medium underline" to="/login">
               войдите
             </Link>
             .
           </div>
         )}
 
-        <section className="bg-white rounded-2xl border border-[#d2d2d7]/60 p-5 shadow-sm">
-          <p className="text-sm text-[#86868b] mb-1">Здравствуйте</p>
+        <section className="bg-white rounded-2xl border border-[#E7EAEE]/60 p-5 shadow-sm">
+          <p className="text-sm text-[#6F7B84] mb-1">Здравствуйте</p>
           <h2 className="text-2xl font-semibold tracking-tight">
             {user ? profile?.full_name || "Клиент" : "Гость"}
           </h2>
@@ -166,10 +166,10 @@ export default function ClientDashboard() {
             <p className="text-sm text-[#515154] mt-1">{formatPhoneDisplay(profile.phone)}</p>
           )}
           <div className="mt-4 flex items-end gap-2">
-            <span className="text-4xl font-bold text-[#0071e3] tabular-nums">
+            <span className="text-4xl font-bold text-[#D4A757] tabular-nums">
               {user ? profile?.balance ?? 0 : "—"}
             </span>
-            <span className="text-sm text-[#86868b] pb-1">занятий на балансе</span>
+            <span className="text-sm text-[#6F7B84] pb-1">занятий на балансе</span>
           </div>
           {user && !profile && (
             <p className="mt-3 text-sm text-amber-800 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
@@ -178,16 +178,16 @@ export default function ClientDashboard() {
           )}
         </section>
 
-        <section className="bg-white rounded-2xl border border-[#d2d2d7]/60 p-5 shadow-sm">
+        <section className="bg-white rounded-2xl border border-[#E7EAEE]/60 p-5 shadow-sm">
           <button
             type="button"
             disabled={loading || !user || (profile?.balance ?? 0) <= 0}
             onClick={() => void handleCheckIn()}
-            className="w-full rounded-xl bg-[#0071e3] text-white font-semibold py-3.5 hover:bg-[#0077ed] disabled:opacity-50 transition-colors"
+            className="w-full rounded-xl bg-[#D4A757] text-white font-semibold py-3.5 hover:bg-[#E2B768] disabled:opacity-50 transition-colors"
           >
             {loading ? "Сохранение…" : "Отметиться на занятие"}
           </button>
-          <p className="text-xs text-[#86868b] mt-2 text-center leading-relaxed">
+          <p className="text-xs text-[#6F7B84] mt-2 text-center leading-relaxed">
             Сохраняет визит в Supabase и списывает занятие (только для вошедших пользователей).
           </p>
           {message && (
@@ -203,12 +203,12 @@ export default function ClientDashboard() {
           )}
         </section>
 
-        <section className="bg-white rounded-2xl border border-[#d2d2d7]/60 p-5 shadow-sm">
+        <section className="bg-white rounded-2xl border border-[#E7EAEE]/60 p-5 shadow-sm">
           <h3 className="font-semibold mb-3">Последние визиты</h3>
           {!user ? (
-            <p className="text-sm text-[#86868b]">Войдите, чтобы увидеть историю посещений.</p>
+            <p className="text-sm text-[#6F7B84]">Войдите, чтобы увидеть историю посещений.</p>
           ) : visits.length === 0 ? (
-            <p className="text-sm text-[#86868b]">Пока нет посещений</p>
+            <p className="text-sm text-[#6F7B84]">Пока нет посещений</p>
           ) : (
             <ul className="space-y-2">
               {visits.map((v) => (
@@ -217,7 +217,7 @@ export default function ClientDashboard() {
                   className="flex justify-between text-sm py-2 border-b border-[#f5f5f7] last:border-0"
                 >
                   <span className="text-[#515154]">Визит #{v.id}</span>
-                  <span className="text-[#86868b] tabular-nums">{fmtDateTime(v.created_at)}</span>
+                  <span className="text-[#6F7B84] tabular-nums">{fmtDateTime(v.created_at)}</span>
                 </li>
               ))}
             </ul>

@@ -336,9 +336,9 @@ function LiveStudentQr({ studentId, size = 180 }: { studentId: string; size?: nu
     return <div style={{ width: size, height: size, borderRadius: 8, background: "#e8e8ed", display: "flex", alignItems: "center", justifyContent: "center", color: "#86868b", fontSize: 12, margin: "0 auto" }}>Нет ученика</div>;
   }
   if (!src) {
-    return <div style={{ width: size, height: size, margin: "0 auto", borderRadius: 8, background: "#2c2c2e", border: "1px solid #3a3a3c" }} />;
+    return <div style={{ width: size, height: size, margin: "0 auto", borderRadius: 8, background: "#FAFAFA", border: "1px solid #3a3a3c" }} />;
   }
-  return <img src={src} width={size} height={size} alt={`QR ученика ${studentId}`} style={{ display: "block", margin: "0 auto", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />;
+  return <img src={src} width={size} height={size} alt={`QR ученика ${studentId}`} style={{ display: "block", margin: "0 auto", borderRadius: 8, boxShadow: "0 8px 20px rgba(47, 72, 88, 0.10)" }} />;
 }
 
 
@@ -374,7 +374,7 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
     <div onClick={onClose} style={{
       position: "fixed",
       inset: 0,
-      background: "rgba(0, 0, 0, 0.6)", // Sleek dark overlay
+      background: "rgba(47, 72, 88, 0.20)", // Light UI overlay
       backdropFilter: "blur(4px)",
       display: "flex",
       alignItems: "center",
@@ -383,14 +383,14 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
       padding: 16
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: "#2c2c2e",
-        border: "1px solid #3a3a3c",
+        background: "#FAFAFA",
+        border: "1px solid #E7EAEE",
         borderRadius: 16,
         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)",
         padding: 24,
         maxWidth: 420,
         width: "100%",
-        color: "#f5f5f7",
+        color: "#333333",
         position: "relative"
       }}>
         <button onClick={onClose} style={{
@@ -399,7 +399,7 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
           right: 14,
           background: "none",
           border: "none",
-          color: "#8e8e93",
+          color: "#6F7B84",
           cursor: "pointer",
           padding: 4,
           borderRadius: "50%",
@@ -416,23 +416,23 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
   );
 }
 
-function StatCard({ icon, label, value, color="#0071e3" }: { icon: React.ReactNode; label: string; value: string | number; color?: string }) {
+function StatCard({ icon, label, value, color="#D4A757" }: { icon: React.ReactNode; label: string; value: string | number; color?: string }) {
   const appleColor = color === "#cb5d43" ? "#0aa4ff" : color;
   return (
     <div style={{
-      background: "#2c2c2e",
-      border: "1px solid #3a3a3c",
+      background: "#FAFAFA",
+      border: "1px solid #E7EAEE",
       borderRadius: 14,
       padding: "20px",
       display: "flex",
       flexDirection: "column",
       gap: 12,
-      boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+      boxShadow: "0 10px 24px rgba(47, 72, 88, 0.08)"
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#8e8e93", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6F7B84", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
         <span style={{ color: appleColor, background: `${appleColor}20`, padding: 7, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>{label}
       </div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: "#f5f5f7", letterSpacing: "-0.5px" }}>{value}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: "#333333", letterSpacing: "-0.5px" }}>{value}</div>
     </div>
   );
 }
@@ -440,21 +440,21 @@ function StatCard({ icon, label, value, color="#0071e3" }: { icon: React.ReactNo
 function Input({ label, value, onChange, type="text", placeholder="", options=null, disabled=false }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; options?: { value: string; label: string }[] | null; disabled?: boolean }) {
   const [isFocused, setIsFocused] = useState(false);
   const s = {
-    background: disabled ? "#252528" : "#1e1e20",
-    border: `1px solid ${isFocused ? "#0a84ff" : "#3a3a3c"}`,
+    background: disabled ? "#F1F3F5" : "#FFFFFF",
+    border: `1px solid ${isFocused ? "#D4A757" : "#DADFE5"}`,
     borderRadius: 8,
-    color: disabled ? "#8e8e93" : "#f5f5f7",
+    color: disabled ? "#9AA4AD" : "#333333",
     padding: "8px 12px",
     fontSize: 13,
     width: "100%",
     outline: "none",
-    boxShadow: isFocused ? "0 0 0 3.5px rgba(10, 132, 255, 0.25)" : "none",
+    boxShadow: isFocused ? "0 0 0 3px rgba(212, 167, 87, 0.22)" : "none",
     transition: "all 0.15s ease-in-out",
     fontFamily: "inherit"
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label style={{ fontSize: 11, color: "#8e8e93", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+      <label style={{ fontSize: 11, color: "#6F7B84", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
       {options ? (
         <select 
           style={{ ...s, height: 38 }} 
@@ -486,7 +486,7 @@ function Btn({ children, onClick, color="default", small=false, type="button", d
   const colors: Record<string, { bg: string; border: string; text: string; hover: string }> = {
     default: { bg: "#2c2c2e", border: "#3a3a3c", text: "#f5f5f7", hover: "#3a3a3c" },
     green: { bg: "#30d158", border: "#30d158", text: "#ffffff", hover: "#2db34f" },
-    blue: { bg: "#0a84ff", border: "#0a84ff", text: "#ffffff", hover: "#0062c3" },
+    blue: { bg: "#D4A757", border: "#D4A757", text: "#ffffff", hover: "#0062c3" },
     red: { bg: "#ff453a", border: "#ff453a", text: "#ffffff", hover: "#e03128" },
     yellow: { bg: "#ffd60a", border: "#ffd60a", text: "#1d1d1f", hover: "#e08200" },
   };
@@ -1166,16 +1166,16 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div style={{display:"flex",height:"100vh",alignItems:"center",justifyContent:"center",background:"#f5f5f7",flexDirection:"column",gap:16}}>
+      <div style={{display:"flex",height:"100vh",alignItems:"center",justifyContent:"center",background:"#FFFFFF",flexDirection:"column",gap:16}}>
         <div style={{
           width: 48,
           height: 48,
           borderRadius: "50%",
           border: "3px solid #e8e8ed",
-          borderTopColor: "#0071e3",
+          borderTopColor: "#D4A757",
           animation: "spin 1s linear infinite"
         }} />
-        <div style={{fontSize:13,color:"#86868b",fontWeight:500,fontFamily:"inherit"}}>Синхронизация с облаком Supabase...</div>
+        <div style={{fontSize:13,color:"#6F7B84",fontWeight:500,fontFamily:"inherit"}}>Синхронизация с облаком Supabase...</div>
         <style>{`
           @keyframes spin { to { transform: rotate(360deg); } }
         `}</style>
@@ -1184,15 +1184,18 @@ export default function App() {
   }
 
   const C = {
-    bg: "#1c1c1e",        // Elegant Apple Dark Gray (Space Gray) background
-    side: "#18181a",      // Crisp Deeper Dark for Sidebar
-    main: "#1c1c1e",     
-    card: "#2c2c2e",      // Sleek Charcoal for Container Cards
-    border: "#3a3a3c",    // Apple System Gray 4 for Dark Dividers
-    text: "#f5f5f7",      // Crisp Off-White Text
-    muted: "#8e8e93",     // System Gray (iOS Secondary Text)
-    accent: "#0a84ff",    // Radiating iOS Mode Blue
-    activeSide: "#2a2a2d" // Active selection background
+    bg: "#FFFFFF",         // Main background
+    side: "#2F4858",       // Sidebar matte blue-green
+    main: "#FFFFFF",
+    card: "#FAFAFA",       // Floating card background
+    border: "#E7EAEE",
+    text: "#333333",       // Main readable text
+    muted: "#6F7B84",
+    accent: "#D4A757",     // Mustard accent
+    activeSide: "#3C5C70", // Active sidebar item
+    sideText: "#F7FAFC",
+    sideMuted: "#DDE5EB",
+    cardShadow: "0 10px 24px rgba(47, 72, 88, 0.08)"
   };
 
   const getEmojiIcon = (type: string) => {
@@ -1284,7 +1287,7 @@ export default function App() {
                 padding:"10px 14px",
                 background: page===n.id ? C.activeSide : "transparent",
                 border:"none",
-                color: page===n.id ? C.accent : "#aeaeb2",
+                color: page===n.id ? C.sideText : C.sideMuted,
                 cursor:"pointer",
                 fontSize:13,
                 fontFamily:"inherit",
@@ -1294,9 +1297,9 @@ export default function App() {
                 transition:"all 0.15s ease", 
                 fontWeight: page===n.id ? 600 : 500
               }}
-              className={page===n.id ? "" : "hover:bg-white/10 hover:text-white"}
+              className={page===n.id ? "" : "hover:bg-white/10"}
             >
-              <span style={{color: page===n.id ? C.accent : "#8e8e93", display: "flex", alignItems: "center"}}>{n.icon}</span>{isSidebarOpen&&<span>{n.label}</span>}
+              <span style={{color: page===n.id ? C.accent : C.sideMuted, display: "flex", alignItems: "center"}}>{n.icon}</span>{isSidebarOpen&&<span>{n.label}</span>}
             </button>
           ))}
         </nav>
@@ -1320,7 +1323,7 @@ export default function App() {
             style={{
               fontSize: 12,
               fontWeight: 600,
-              color: "#aeaeb2",
+              color: C.sideMuted,
               textDecoration: "none",
               padding: "8px 10px",
               borderRadius: 8,
@@ -1346,13 +1349,13 @@ export default function App() {
                   width: 6,
                   height: 6,
                   borderRadius: "50%", 
-                  background: !user ? "#0a84ff" : dbStatus === "ok" ? "#30d158" : dbStatus === "no_table" ? "#ffd60a" : "#ff453a"
+                  background: !user ? "#D4A757" : dbStatus === "ok" ? "#30d158" : dbStatus === "no_table" ? "#ffd60a" : "#ff453a"
                 }} />
                 <span style={{fontSize: 10, textTransform: "uppercase", letterSpacing: "0.5px"}}>
                   {!user ? "Режим: Демо (Локально)" : dbStatus === "ok" ? "База: Активна" : dbStatus === "no_table" ? "База: Нужна настройка" : "База: Ошибка"}
                 </span>
                 {syncing && (
-                  <span style={{width: 8, height: 8, border: "1.5px solid #0a84ff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.5s linear infinite", marginLeft: "auto"}} />
+                  <span style={{width: 8, height: 8, border: "1.5px solid #D4A757", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.5s linear infinite", marginLeft: "auto"}} />
                 )}
               </div>
               <div style={{fontSize: 10, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} title={user?.email || "Просмотр без авторизации"}>
@@ -1384,8 +1387,8 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <div style={{display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: "#0071e3"}}>
-                    <Zap size={13} style={{color: "#0071e3"}} />
+                  <div style={{display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: "#D4A757"}}>
+                    <Zap size={13} style={{color: "#D4A757"}} />
                     <span style={{textTransform: "uppercase", letterSpacing: "0.5px", fontSize: 10}}>Тариф: Пробный</span>
                   </div>
                   <div style={{fontSize: 12, fontWeight: 600, color: C.text, display: "flex", justifyContent: "space-between", alignItems: "center"}}>
@@ -1393,7 +1396,7 @@ export default function App() {
                     <span style={{color: getTrialDaysLeft() <= 1 ? "#ff453a" : C.text}}>{getTrialDaysLeft()} дней</span>
                   </div>
                   <div style={{width: "100%", background: C.bg, height: 4, borderRadius: 2, overflow: "hidden", marginTop: 2}}>
-                    <div style={{width: `${Math.min(100, (getTrialDaysLeft() / 5) * 100)}%`, background: getTrialDaysLeft() <= 1 ? "#ff453a" : "#0071e3", height: "100%", borderRadius: 2}} />
+                    <div style={{width: `${Math.min(100, (getTrialDaysLeft() / 5) * 100)}%`, background: getTrialDaysLeft() <= 1 ? "#ff453a" : "#D4A757", height: "100%", borderRadius: 2}} />
                   </div>
                 </>
               )}
@@ -1410,7 +1413,7 @@ export default function App() {
                 gap: isSidebarOpen ? 12 : 0,
                 justifyContent: isSidebarOpen ? "flex-start" : "center",
                 padding: "10px 14px",
-                background: "#0071e3",
+                background: "#D4A757",
                 border: "none",
                 color: "#ffffff",
                 cursor: "pointer",
@@ -1419,7 +1422,7 @@ export default function App() {
                 borderRadius: 8, 
                 transition: "all 0.15s ease", 
                 fontWeight: 600,
-                boxShadow: "0 2px 8px rgba(0,113,227,0.15)"
+                boxShadow: "0 2px 8px rgba(212,167,87,0.18)"
               }}
               className="hover:opacity-95 active:scale-98"
               title="Войти в личный кабинет"
@@ -1480,7 +1483,7 @@ export default function App() {
                 </div>
                 
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14,marginBottom:20}}>
-                  <StatCard icon={<Users size={16}/>} label="Всего учеников" value={stats.total} color="#0071e3"/>
+                  <StatCard icon={<Users size={16}/>} label="Всего учеников" value={stats.total} color="#D4A757"/>
                   <StatCard icon={<CheckSquare size={16}/>} label="Активных" value={stats.active} color="#34c759"/>
                   <StatCard icon={<AlertTriangle size={16}/>} label="Должников" value={stats.debt} color="#ff9500"/>
                   <StatCard icon={<GraduationCap size={16}/>} label="Преподавателей" value={stats.teachers} color="#af52de"/>
@@ -1601,7 +1604,7 @@ export default function App() {
       {authModalOpen&&(
         <Modal onClose={()=>{setAuthModalOpen(false); setAuthError("");}}>
           <div style={{textAlign:"center", marginBottom: 20}}>
-            <div style={{width:54,height:54,borderRadius:12,background:"linear-gradient(135deg, #0071e3 0%, #af52de 100%)",margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",color:"#ffffff",boxShadow:"0 4px 12px rgba(0,113,227,0.2)"}}>
+            <div style={{width:54,height:54,borderRadius:12,background:"linear-gradient(135deg, #D4A757 0%, #af52de 100%)",margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",color:"#ffffff",boxShadow:"0 4px 12px rgba(212,167,87,0.22)"}}>
               <Cloud size={28} />
             </div>
             <h1 style={{fontSize:20,fontWeight:800,color:"#1d1d1f",letterSpacing:"-0.5px",marginBottom:4,fontFamily:"inherit"}}>CRM Конструктор Студий</h1>
@@ -1609,7 +1612,7 @@ export default function App() {
           </div>
 
           {authModalReason && (
-            <div style={{fontSize:12,color:"#0071e3",background:"rgba(0,113,227,0.06)",border:"1.5px solid rgba(0,113,227,0.12)",padding:"10px 14px",borderRadius:10,lineHeight:1.44,fontWeight:500,marginBottom:16,textAlign:"center"}}>
+            <div style={{fontSize:12,color:"#D4A757",background:"rgba(0,113,227,0.06)",border:"1.5px solid rgba(0,113,227,0.12)",padding:"10px 14px",borderRadius:10,lineHeight:1.44,fontWeight:500,marginBottom:16,textAlign:"center"}}>
               🔒 {authModalReason}
             </div>
           )}
@@ -1647,10 +1650,10 @@ export default function App() {
                   type="checkbox" 
                   checked={consent} 
                   onChange={(e) => setConsent(e.target.checked)}
-                  style={{cursor:"pointer", width: 16, height: 16, border: "1px solid #cbd5e1", borderRadius: 4, accentColor: "#0071e3", marginTop: 2}}
+                  style={{cursor:"pointer", width: 16, height: 16, border: "1px solid #cbd5e1", borderRadius: 4, accentColor: "#D4A757", marginTop: 2}}
                 />
                 <span style={{fontSize:11, color: C.muted, lineHeight: 1.35}}>
-                  Я согласен на <a href="#" onClick={(e) => { e.preventDefault(); alert("Согласие на обработку персональных данных: данные собираются исключительно для функционирования CRM-системы и облачной синхронизации в соответствии с ФЗ №152."); }} style={{color:"#0071e3", textDecoration:"underline"}}>обработку персональных данных</a>
+                  Я согласен на <a href="#" onClick={(e) => { e.preventDefault(); alert("Согласие на обработку персональных данных: данные собираются исключительно для функционирования CRM-системы и облачной синхронизации в соответствии с ФЗ №152."); }} style={{color:"#D4A757", textDecoration:"underline"}}>обработку персональных данных</a>
                 </span>
               </label>
             )}
@@ -1665,7 +1668,7 @@ export default function App() {
               type="submit" 
               disabled={formLoading || (authMode === "register" && (!consent || !phone.trim() || phone.length < 18))}
               style={{
-                background: (authMode === "register" && (!consent || !phone.trim() || phone.length < 18)) ? "#a5d1ff" : "#0071e3",
+                background: (authMode === "register" && (!consent || !phone.trim() || phone.length < 18)) ? "#a5d1ff" : "#D4A757",
                 color:"#ffffff",
                 border:"none",
                 borderRadius:8,
@@ -1673,7 +1676,7 @@ export default function App() {
                 fontSize:13,
                 fontWeight:600,
                 cursor: (formLoading || (authMode === "register" && (!consent || !phone.trim() || phone.length < 18))) ? "not-allowed" : "pointer",
-                boxShadow:"0 2px 8px rgba(0,113,227,0.15)",
+                boxShadow:"0 2px 8px rgba(212,167,87,0.18)",
                 display:"flex",
                 alignItems:"center",
                 justifyContent:"center",
@@ -1698,7 +1701,7 @@ export default function App() {
                 setAuthMode(authMode === "login" ? "register" : "login");
                 setAuthError("");
               }}
-              style={{background:"none",border:"none",color:"#0071e3",cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit"}}
+              style={{background:"none",border:"none",color:"#D4A757",cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit"}}
               className="hover:underline"
             >
               {authMode === "login" ? "Создать новый аккаунт (Регистрация)" : "Уже есть аккаунт? Войти"}
@@ -1746,13 +1749,13 @@ export default function App() {
               width: 64,
               height: 64,
               borderRadius: 16,
-              background: "linear-gradient(135deg, #0071e3 0%, #af52de 100%)",
+              background: "linear-gradient(135deg, #D4A757 0%, #af52de 100%)",
               margin: "0 auto 24px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "#ffffff",
-              boxShadow: "0 8px 16px rgba(0, 113, 227, 0.2)"
+              boxShadow: "0 8px 16px rgba(212, 167, 87, 0.22)"
             }}>
               <ShieldAlert size={32} />
             </div>
@@ -1772,7 +1775,7 @@ export default function App() {
                 alert("🎉 Симуляция оплаты успешна! Подписка продлена, доступ к системе восстановлен. Приятного пользования!");
               }}
               style={{
-                background: "#0071e3",
+                background: "#D4A757",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: 12,
@@ -1780,7 +1783,7 @@ export default function App() {
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(0, 113, 227, 0.2)",
+                boxShadow: "0 4px 12px rgba(212, 167, 87, 0.22)",
                 width: "100%",
                 display: "flex",
                 alignItems: "center",
@@ -1971,7 +1974,7 @@ function StudentPage({
               fontWeight: 600,
               maxWidth: 420,
               textAlign: "center",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
+              boxShadow: "0 14px 32px rgba(47,72,88,0.14)",
               background: toast.tone === "err" ? "rgba(255, 69, 58, 0.95)" : toast.tone === "warn" ? "rgba(255, 159, 10, 0.95)" : "rgba(48, 209, 88, 0.95)",
               color: toast.tone === "warn" ? "#1c1c1e" : "#ffffff",
               border: "1px solid rgba(255,255,255,0.2)"
@@ -1994,7 +1997,7 @@ function StudentPage({
 
       <AnimatePresence>
         {showForm && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 16, overflow: "hidden", boxShadow: C.cardShadow }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.5px" }}>Оформление нового ученика</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
               <Input label="ФИО Ученика" value={sf.name} onChange={v => setSf({ ...sf, name: v })} placeholder="Например: Иван Иванов" />
@@ -2059,7 +2062,7 @@ function StudentPage({
         <Input label="Быстрый поиск" value={studentSearch} onChange={setStudentSearch} placeholder="Фамилия, имя или цифры номера телефона…" />
       </div>
 
-      <div style={{ display: "inline-flex", background: "#2c2c2e", borderRadius: 8, padding: 2, marginBottom: 16, gap: 2, maxWidth: "100%", overflowX: "auto" }}>
+      <div style={{ display: "inline-flex", background: "#FAFAFA", borderRadius: 8, padding: 2, marginBottom: 16, gap: 2, maxWidth: "100%", overflowX: "auto" }}>
         {[
           ["all", "Все ученики"],
           ["active", "Активные абонементы"],
@@ -2093,7 +2096,7 @@ function StudentPage({
         })}
       </div>
 
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", boxShadow: C.cardShadow }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 360 }}>
             <thead>
@@ -2380,7 +2383,7 @@ function TeacherPage({data,save,deleteTeacher,showForm,setShowForm,tf,setTf,addT
 
       <AnimatePresence>
         {showForm&&(
-          <motion.div initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: "auto"}} exit={{opacity: 0, height: 0}} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:16, overflow:"hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+          <motion.div initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: "auto"}} exit={{opacity: 0, height: 0}} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:16, overflow:"hidden", boxShadow: C.cardShadow}}>
             <div style={{fontSize:12,fontWeight:600,color:C.muted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.5px"}}>Добавление преподавателя/тренера</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
               <Input label="ФИО Преподавателя" value={tf.name} onChange={v=>setTf({...tf,name:v})} placeholder="Например: Смирнов Алексей"/>
@@ -2403,7 +2406,7 @@ function TeacherPage({data,save,deleteTeacher,showForm,setShowForm,tf,setTf,addT
       ) : (
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
           {teachersFiltered.map(t=>(
-            <div key={t.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}} className="hover:border-zinc-500 transition-colors">
+            <div key={t.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20, boxShadow: C.cardShadow}} className="hover:border-zinc-500 transition-colors">
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
                 <div style={{width:44,height:44,borderRadius:"50%",background:`${getColor(t.direction)}20`,border:`1px solid ${getColor(t.direction)}35`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:getColor(t.direction),fontWeight:700,flexShrink:0}}>{t.name[0]}</div>
                 <div>
@@ -2442,7 +2445,7 @@ function SchedulePage({data,save,deleteSched,showForm,setShowForm,schf,setSchf,a
 
       <AnimatePresence>
         {showForm&&(
-          <motion.div initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: "auto"}} exit={{opacity: 0, height: 0}} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:16, overflow:"hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+          <motion.div initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: "auto"}} exit={{opacity: 0, height: 0}} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:16, overflow:"hidden", boxShadow: C.cardShadow}}>
             <div style={{fontSize:12,fontWeight:600,color:C.muted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.5px"}}>Создать занятие в расписании</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>
               <Input label="День недели" value={schf.day} onChange={v=>setSchf({...schf,day:v})} options={DAYS_LABEL.map((d,i)=>({value:String(i),label:d}))}/>
@@ -2463,7 +2466,7 @@ function SchedulePage({data,save,deleteSched,showForm,setShowForm,schf,setSchf,a
         {DAYS_SHORT.map((day,di)=>{
           const lessons = data.schedule.filter(s=>s.day===di).sort((a,b)=>a.time.localeCompare(b.time));
           return (
-            <div key={di} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+            <div key={di} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden", boxShadow: C.cardShadow}}>
               <div style={{padding:"12px 14px",background:"#252528",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:600,color:C.text,textTransform:"uppercase",letterSpacing:"0.5px"}}>{DAYS_LABEL[di]} ({day})</div>
               <div style={{padding:14,display:"flex",flexDirection:"column",gap:10,minHeight:110}}>
                 {lessons.length===0&&<div style={{fontSize:11,color:C.muted,padding:"20px 0",textAlign:"center", border: "1px dashed #3a3a3c", borderRadius: 8, background: C.bg}}>Занятий нет</div>}
@@ -2558,7 +2561,7 @@ function AnalyticsPage({data,stats,C,getColor}: { data: DB; stats: any; C: any; 
           display: "flex",
           alignItems: "center",
           gap: 12,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          boxShadow: C.cardShadow,
           color: C.text,
           transition: "all 0.25s ease"
         }}>
@@ -2591,7 +2594,7 @@ function AnalyticsPage({data,stats,C,getColor}: { data: DB; stats: any; C: any; 
       </div>
 
       {/* CAPSULE POWERED STRIP BAR */}
-      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18,marginBottom:16, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18,marginBottom:16, boxShadow: C.cardShadow}}>
         <div style={{fontSize:12,fontWeight:700,color:C.muted,marginBottom:12,textTransform:"uppercase",letterSpacing:"0.5px"}}>📊 Долевое распределение доходов студии</div>
         {dirRevenue.length === 0 ? (
           <div style={{fontSize:12, color: C.muted, fontStyle: "italic"}}>Нет данных для построения полосы долей</div>
@@ -2628,7 +2631,7 @@ function AnalyticsPage({data,stats,C,getColor}: { data: DB; stats: any; C: any; 
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))",gap:14,marginBottom:14}}>
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: C.cardShadow}}>
           <div style={{fontSize:12,fontWeight:600,color:C.muted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.5px"}}>💰 Доходы распределенные по направлениям</div>
           {dirRevenue.length===0 ? (
             <div style={{color:C.muted,fontSize:13, textAlign:"center", padding:20}}>Нет выручки для анализа</div>
@@ -2649,7 +2652,7 @@ function AnalyticsPage({data,stats,C,getColor}: { data: DB; stats: any; C: any; 
           )}
         </div>
 
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: C.cardShadow}}>
           <div style={{fontSize:12,fontWeight:600,color:C.muted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.5px"}}>📅 Загруженность студии (занятий/нед.)</div>
           <div style={{display:"flex",alignItems:"flex-end",gap:10,height:120, paddingBottom: 10}}>
             {visitsByDay.map((v,i)=>(
@@ -2664,22 +2667,22 @@ function AnalyticsPage({data,stats,C,getColor}: { data: DB; stats: any; C: any; 
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))",gap:14}}>
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: C.cardShadow}}>
           <div style={{fontSize:12,fontWeight:600,color:C.muted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.5px"}}>👥 Форматы обучения (ученики)</div>
           <div style={{display:"flex",alignItems:"center",gap:24, justifyContent: "center", padding: "10px 0"}}>
             <svg width={100} height={100} viewBox="0 0 100 100" style={{transform: "rotate(-90deg)"}}>
               <circle cx={50} cy={50} r={40} fill="none" stroke={C.bg} strokeWidth={12}/>
-              {groupPct>0&&<circle cx={50} cy={50} r={40} fill="none" stroke="#0071e3" strokeWidth={12} strokeDasharray={`${groupPct*2.513} ${(100-groupPct)*2.513}`} strokeDashoffset={0} strokeLinecap="round"/>}
+              {groupPct>0&&<circle cx={50} cy={50} r={40} fill="none" stroke="#D4A757" strokeWidth={12} strokeDasharray={`${groupPct*2.513} ${(100-groupPct)*2.513}`} strokeDashoffset={0} strokeLinecap="round"/>}
               {indivPct>0&&<circle cx={50} cy={50} r={40} fill="none" stroke="#af52de" strokeWidth={12} strokeDasharray={`${indivPct*2.513} ${(100-indivPct)*2.513}`} strokeDashoffset={`-${groupPct*2.513}`} strokeLinecap="round"/>}
             </svg>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}><div style={{width:12,height:12,borderRadius:3,background:"#0071e3"}}/><span style={{color:C.muted, fontWeight:500}}>Групповые</span><strong style={{color:C.text}}>{groupCount} ({groupPct}%)</strong></div>
+              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}><div style={{width:12,height:12,borderRadius:3,background:"#D4A757"}}/><span style={{color:C.muted, fontWeight:500}}>Групповые</span><strong style={{color:C.text}}>{groupCount} ({groupPct}%)</strong></div>
               <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}><div style={{width:12,height:12,borderRadius:3,background:"#af52de"}}/><span style={{color:C.muted, fontWeight:500}}>Индивидуальные</span><strong style={{color:C.text}}>{indivCount} ({indivPct}%)</strong></div>
             </div>
           </div>
         </div>
 
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:18, boxShadow: C.cardShadow}}>
           <div style={{fontSize:12,fontWeight:600,color:C.muted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.5px"}}>🎫 Специфика абонементов</div>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <div>
@@ -2796,7 +2799,7 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
       <h1 style={{fontSize:22,fontWeight:750,marginBottom:20, color:C.text}}>⚙️ Настройки и Конструктор Студии</h1>
       
       {/* SECTION 1: STUDIO NAME */}
-      <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:16, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+      <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:16, boxShadow: C.cardShadow}}>
         <div style={{fontSize:14, fontWeight:700, marginBottom:4, color:C.text}}>🏷️ Название Вашей Студии</div>
         <div style={{fontSize:12, color:C.muted, marginBottom:14}}>Введите собственное название студии. Оно будет отображаться в левом верхнем углу меню и в шапке отчётов.</div>
         <Input 
@@ -2814,7 +2817,7 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
       </div>
 
       {/* SECTION 2: STUDIO TYPE SELECT */}
-      <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:16, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+      <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20, marginBottom:16, boxShadow: C.cardShadow}}>
         <div style={{fontSize:14, fontWeight:700, marginBottom:4, color:C.text}}>🎯 Тип и Назначение Студии</div>
         <div style={{fontSize:12, color:C.muted, marginBottom:16}}>Переключение категории мгновенно перестроит набор дефолтных предметов и настроек под выбранную сферу, чтобы избежать путаницы направлений.</div>
         
@@ -2825,7 +2828,7 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
             onClick={() => handleTypeSelectChange("sport")}
             style={{
               background: data.studioType === "sport" ? "rgba(0, 113, 227, 0.12)" : C.bg,
-              border: `2px solid ${data.studioType === "sport" ? "#0071e3" : C.border}`,
+              border: `2px solid ${data.studioType === "sport" ? "#D4A757" : C.border}`,
               borderRadius: 12, 
               padding: 16, 
               cursor: "pointer", 
@@ -2833,16 +2836,16 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
               display: "flex", 
               gap: 12, 
               alignItems: "center",
-              boxShadow: data.studioType === "sport" ? "0 4px 12px rgba(0, 113, 227, 0.2)" : "0 1px 2px rgba(0,0,0,0.1)"
+              boxShadow: data.studioType === "sport" ? "0 4px 12px rgba(212, 167, 87, 0.22)" : "0 1px 2px rgba(0,0,0,0.1)"
             }}
             className="hover:scale-[1.01] transition-transform"
           >
-            <div style={{width:40, height:40, borderRadius:"50%", background: data.studioType === "sport" ? "rgba(0, 113, 227, 0.2)" : C.card, display:"flex", alignItems:"center", justifyContent:"center", color:"#0071e3", fontSize:20}}>🏋️</div>
+            <div style={{width:40, height:40, borderRadius:"50%", background: data.studioType === "sport" ? "rgba(212, 167, 87, 0.22)" : C.card, display:"flex", alignItems:"center", justifyContent:"center", color:"#D4A757", fontSize:20}}>🏋️</div>
             <div>
-              <div style={{fontWeight:700, color: data.studioType === "sport" ? "#0071e3" : C.text, fontSize:13}}>🏋️ Студия Спорта</div>
+              <div style={{fontWeight:700, color: data.studioType === "sport" ? "#D4A757" : C.text, fontSize:13}}>🏋️ Студия Спорта</div>
               <div style={{fontSize:11, color:C.muted, fontWeight:500}}>Йога, фитнес, секции, залы</div>
             </div>
-            {data.studioType === "sport" && <Check size={18} style={{marginLeft: "auto", color: "#0071e3"}} />}
+            {data.studioType === "sport" && <Check size={18} style={{marginLeft: "auto", color: "#D4A757"}} />}
           </div>
           
           {/* Card 2: Language */}
@@ -2850,7 +2853,7 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
             onClick={() => handleTypeSelectChange("language")}
             style={{
               background: data.studioType === "language" ? "rgba(0, 113, 227, 0.12)" : C.bg,
-              border: `2px solid ${data.studioType === "language" ? "#0071e3" : C.border}`,
+              border: `2px solid ${data.studioType === "language" ? "#D4A757" : C.border}`,
               borderRadius: 12, 
               padding: 16, 
               cursor: "pointer", 
@@ -2858,16 +2861,16 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
               display: "flex", 
               gap: 12, 
               alignItems: "center",
-              boxShadow: data.studioType === "language" ? "0 4px 12px rgba(0, 113, 227, 0.2)" : "0 1px 2px rgba(0,0,0,0.1)"
+              boxShadow: data.studioType === "language" ? "0 4px 12px rgba(212, 167, 87, 0.22)" : "0 1px 2px rgba(0,0,0,0.1)"
             }}
             className="hover:scale-[1.01] transition-transform"
           >
-            <div style={{width:40, height:40, borderRadius:"50%", background: data.studioType === "language" ? "rgba(0, 113, 227, 0.2)" : C.card, display:"flex", alignItems:"center", justifyContent:"center", color:"#0071e3", fontSize:18}}>🏫</div>
+            <div style={{width:40, height:40, borderRadius:"50%", background: data.studioType === "language" ? "rgba(212, 167, 87, 0.22)" : C.card, display:"flex", alignItems:"center", justifyContent:"center", color:"#D4A757", fontSize:18}}>🏫</div>
             <div>
-              <div style={{fontWeight:700, color: data.studioType === "language" ? "#0071e3" : C.text, fontSize:13}}>🏫 Курсы и Языки</div>
+              <div style={{fontWeight:700, color: data.studioType === "language" ? "#D4A757" : C.text, fontSize:13}}>🏫 Курсы и Языки</div>
               <div style={{fontSize:11, color:C.muted, fontWeight:500}}>Школа языков, лекториум, ЕГЭ</div>
             </div>
-            {data.studioType === "language" && <Check size={18} style={{marginLeft: "auto", color: "#0071e3"}} />}
+            {data.studioType === "language" && <Check size={18} style={{marginLeft: "auto", color: "#D4A757"}} />}
           </div>
           
           {/* Card 3: Kids */}
@@ -2875,7 +2878,7 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
             onClick={() => handleTypeSelectChange("kids")}
             style={{
               background: data.studioType === "kids" ? "rgba(0, 113, 227, 0.12)" : C.bg,
-              border: `2px solid ${data.studioType === "kids" ? "#0071e3" : C.border}`,
+              border: `2px solid ${data.studioType === "kids" ? "#D4A757" : C.border}`,
               borderRadius: 12, 
               padding: 16, 
               cursor: "pointer", 
@@ -2883,22 +2886,22 @@ function SettingsPage({data,save,C,getColor,dbStatus,syncing,user,triggerAuthMod
               display: "flex", 
               gap: 12, 
               alignItems: "center",
-              boxShadow: data.studioType === "kids" ? "0 4px 12px rgba(0, 113, 227, 0.2)" : "0 1px 2px rgba(0,0,0,0.1)"
+              boxShadow: data.studioType === "kids" ? "0 4px 12px rgba(212, 167, 87, 0.22)" : "0 1px 2px rgba(0,0,0,0.1)"
             }}
             className="hover:scale-[1.01] transition-transform"
           >
-            <div style={{width:40, height:40, borderRadius:"50%", background: data.studioType === "kids" ? "rgba(0, 113, 227, 0.2)" : C.card, display:"flex", alignItems:"center", justifyContent:"center", color:"#0071e3", fontSize:18}}>👶</div>
+            <div style={{width:40, height:40, borderRadius:"50%", background: data.studioType === "kids" ? "rgba(212, 167, 87, 0.22)" : C.card, display:"flex", alignItems:"center", justifyContent:"center", color:"#D4A757", fontSize:18}}>👶</div>
             <div>
-              <div style={{fontWeight:700, color: data.studioType === "kids" ? "#0071e3" : C.text, fontSize:13}}>👶 Развивающий Центр</div>
+              <div style={{fontWeight:700, color: data.studioType === "kids" ? "#D4A757" : C.text, fontSize:13}}>👶 Развивающий Центр</div>
               <div style={{fontSize:11, color:C.muted, fontWeight:500}}>Кружки для детей, творчество</div>
             </div>
-            {data.studioType === "kids" && <Check size={18} style={{marginLeft: "auto", color: "#0071e3"}} />}
+            {data.studioType === "kids" && <Check size={18} style={{marginLeft: "auto", color: "#D4A757"}} />}
           </div>
         </div>
       </div>
       
       {/* SECTION 3: WORK DIRECTIONS BUILDER */}
-      <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20, boxShadow: "0 4px 12px rgba(0,0,0,0.15)"}}>
+      <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20, boxShadow: C.cardShadow}}>
         <div style={{fontSize:14, fontWeight:700, marginBottom:4, color:C.text}}>🧱 Конструктор отображаемых направлений / предметов</div>
         <div style={{fontSize:12, color:C.muted, marginBottom:16}}>Определите, какие направления сейчас активны в студии. Исключите ненужные предметы (например, бокс в языковой школе), чтобы они не мешали при заполнении журналов и расписания. Новые направления из поля ниже дополнительно сохраняются в таблицу <span style={{fontFamily:"var(--font-mono)", color: C.text}}>crm_directions</span> в Supabase и подмешиваются в списки при следующей загрузке.</div>
         
@@ -3071,7 +3074,7 @@ function FinancesPage({ data, save, C }: { data: DB; save: (d: DB) => void; C: a
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
         {/* ADD EXPENSE COMPONENT */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: C.cardShadow }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16 }}>
             💸 Зарегистрировать новый расход
           </div>
@@ -3105,7 +3108,7 @@ function FinancesPage({ data, save, C }: { data: DB; save: (d: DB) => void; C: a
         </div>
 
         {/* EXPENSES HISTORIC LIST */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", maxHeight: 420 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: C.cardShadow, display: "flex", flexDirection: "column", maxHeight: 420 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16, display: "flex", justifyContent: "space-between" }}>
             <span>История затрат</span>
             <span style={{ color: "#ff453a" }}>Итого: {fmtMoney(originalExpenses.reduce((a, b) => a + b.sum, 0))}</span>
@@ -3289,7 +3292,7 @@ function TeamPage({ data, save, C, user, getTrialDaysLeft, triggerAuthModal }: {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
         {/* ADD STAFF MEMBERS REGISTRATION CARD */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: C.cardShadow }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 14 }}>
             ➕ Добавить сотрудника в студию
           </div>
@@ -3349,7 +3352,7 @@ function TeamPage({ data, save, C, user, getTrialDaysLeft, triggerAuthModal }: {
         </div>
 
         {/* TEAM MEMBERS DIRECTORY */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, boxShadow: C.cardShadow }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16 }}>
             📋 Профиль Команды ({originalTeam.length} из 3)
           </div>
@@ -3375,12 +3378,12 @@ function TeamPage({ data, save, C, user, getTrialDaysLeft, triggerAuthModal }: {
                       width: 36,
                       height: 36,
                       borderRadius: "50%",
-                      background: "rgba(0,113,227,0.2)",
+                      background: "rgba(212,167,87,0.22)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: 14,
-                      color: "#0071e3",
+                      color: "#D4A757",
                       fontWeight: 700
                     }}>
                       {t.name[0]}

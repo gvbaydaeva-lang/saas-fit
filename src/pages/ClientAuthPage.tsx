@@ -78,10 +78,10 @@ export default function ClientAuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-[#d2d2d7]/60 p-8">
+    <div className="min-h-screen bg-[#FFFFFF] text-[#333333] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-[#E7EAEE]/60 p-8">
         <h1 className="text-2xl font-semibold tracking-tight mb-1">Личный кабинет клиента</h1>
-        <p className="text-sm text-[#86868b] mb-6">
+        <p className="text-sm text-[#6F7B84] mb-6">
           Email, телефон и пароль{" "}
           {mode === "login" ? "— для входа используются email и пароль" : "— регистрация с проверкой телефона"}
         </p>
@@ -101,7 +101,7 @@ export default function ClientAuthPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="mt-1 w-full rounded-xl border border-[#d2d2d7] px-3 py-2.5 text-base outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+              className="mt-1 w-full rounded-xl border border-[#E7EAEE] px-3 py-2.5 text-base outline-none focus:border-[#D4A757] focus:ring-2 focus:ring-[#D4A757]/25"
               required
             />
           </label>
@@ -114,11 +114,11 @@ export default function ClientAuthPage() {
               value={phone}
               onChange={(e) => setPhone(maskPhoneInput(e.target.value))}
               placeholder="+7 (___) ___-__-__"
-              className="mt-1 w-full rounded-xl border border-[#d2d2d7] px-3 py-2.5 text-base outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+              className="mt-1 w-full rounded-xl border border-[#E7EAEE] px-3 py-2.5 text-base outline-none focus:border-[#D4A757] focus:ring-2 focus:ring-[#D4A757]/25"
               required={mode === "register"}
             />
           </label>
-          <p className="text-xs text-[#86868b] -mt-2 mb-1">
+          <p className="text-xs text-[#6F7B84] -mt-2 mb-1">
             При регистрации номер должен быть в списке студии (
             <code className="text-[10px]">customers_db</code>).
           </p>
@@ -131,7 +131,7 @@ export default function ClientAuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={6}
-              className="mt-1 w-full rounded-xl border border-[#d2d2d7] px-3 py-2.5 text-base outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
+              className="mt-1 w-full rounded-xl border border-[#E7EAEE] px-3 py-2.5 text-base outline-none focus:border-[#D4A757] focus:ring-2 focus:ring-[#D4A757]/25"
               required
             />
           </label>
@@ -162,7 +162,7 @@ export default function ClientAuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-[#0071e3] text-white font-semibold py-3 hover:bg-[#0077ed] disabled:opacity-60 transition-colors"
+            className="w-full rounded-xl bg-[#D4A757] text-white font-semibold py-3 hover:bg-[#E2B768] disabled:opacity-60 transition-colors"
           >
             {loading ? "Подождите…" : mode === "login" ? "Войти" : "Зарегистрироваться"}
           </button>
@@ -170,7 +170,7 @@ export default function ClientAuthPage() {
 
         <button
           type="button"
-          className="mt-4 w-full text-sm text-[#0071e3] font-medium"
+          className="mt-4 w-full text-sm text-[#D4A757] font-medium"
           onClick={() => {
             setMode(mode === "login" ? "register" : "login");
             setError("");
@@ -180,8 +180,8 @@ export default function ClientAuthPage() {
           {mode === "login" ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Войти"}
         </button>
 
-        <p className="mt-6 text-center text-xs text-[#86868b]">
-          <Link to="/" className="text-[#0071e3] font-medium">
+        <p className="mt-6 text-center text-xs text-[#6F7B84]">
+          <Link to="/" className="text-[#D4A757] font-medium">
             ← Главная (CRM студии)
           </Link>
         </p>
