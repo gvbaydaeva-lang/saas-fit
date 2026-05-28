@@ -19,8 +19,8 @@ export default function PendingVerificationPage() {
           <p className="text-sm text-[#86868b] mb-4">указанный при регистрации email</p>
         )}
         <p className="text-xs text-[#86868b] mb-6 leading-relaxed">
-          Откройте письмо и нажмите на ссылку. После подтверждения вы сможете войти с тем же email и паролем.
-          В Supabase должно быть включено подтверждение email (Authentication → Providers → Email).
+          Пожалуйста, проверьте вашу почту и перейдите по ссылке для подтверждения аккаунта, прежде чем войти.
+          После подтверждения вы сможете войти с тем же email и паролем.
         </p>
         <Link
           to="/login"

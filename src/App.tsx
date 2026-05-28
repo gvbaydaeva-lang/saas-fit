@@ -949,7 +949,7 @@ export default function App() {
           options: {
             emailRedirectTo,
             data: {
-              phone_number: phone,
+              phone: phone.trim(),
               created_at: new Date().toISOString(),
             }
           }
