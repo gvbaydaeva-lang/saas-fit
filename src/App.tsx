@@ -26,9 +26,7 @@ import {
   Cloud,
   Zap,
   ShieldAlert,
-  History,
-  Clock,
-  MessageSquare
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@supabase/supabase-js";
@@ -1110,6 +1108,42 @@ export default function App() {
     };
   };
 
+  const deleteCrmVisit = async (visitRow: CrmVisitRow): Promise<{ ok: boolean; message: string }> => {
+    if (!user) {
+      triggerAuthModal("Чтобы удалять посещения из облачной истории, войдите в аккаунт");
+      return { ok: false, message: "Требуется вход в аккаунт" };
+    }
+    const ownerUid = getTargetUserId(user);
+    if (!ownerUid) return { ok: false, message: "Не удалось определить владельца CRM" };
+
+    const studentId = visitRow.student_id;
+    const c = data.students.find((x) => x.id === studentId);
+    if (!c) return { ok: false, message: "Ученик не найден" };
+
+    const { error } = await supabase
+      .from("crm_visits")
+      .delete()
+      .eq("id", visitRow.id)
+      .eq("user_id", ownerUid);
+
+    if (error) {
+      console.warn("crm_visits delete:", error.message);
+      return { ok: false, message: "Не удалось удалить визит в облаке" };
+    }
+
+    const students = data.students.map((x) =>
+      x.id !== studentId
+        ? x
+        : {
+            ...x,
+            count: x.abon === "count" ? x.count + 1 : x.count,
+            visits: Math.max(0, (x.visits || 0) - 1),
+          }
+    );
+    save({ ...data, students });
+    return { ok: true, message: "Визит удалён, занятие возвращено на абонемент" };
+  };
+
   const deleteStudent = (id: number) => {
     if (!user) {
       triggerAuthModal("Чтобы вносить изменения в списки и настраивать свою личную облачную CRM, пожалуйста, зарегистрируйтесь или войдите в аккаунт");
@@ -1615,6 +1649,7 @@ export default function App() {
                 save={save}
                 processStudentVisit={processStudentVisit}
                 fetchVisitsForStudent={fetchVisitsForStudent}
+                deleteCrmVisit={deleteCrmVisit}
                 deleteStudent={deleteStudent}
                 showForm={showStudentForm}
                 setShowForm={setShowStudentForm}
@@ -1910,6 +1945,7 @@ function StudentPage({
   save,
   processStudentVisit,
   fetchVisitsForStudent,
+  deleteCrmVisit,
   deleteStudent,
   showForm,
   setShowForm,
@@ -1926,6 +1962,7 @@ function StudentPage({
   save: (d: DB) => void;
   processStudentVisit: (studentId: number, at: Date) => { ok: boolean; message: string; tone: "ok" | "warn" | "err" };
   fetchVisitsForStudent: (studentId: number) => Promise<CrmVisitRow[]>;
+  deleteCrmVisit: (visitRow: CrmVisitRow) => Promise<{ ok: boolean; message: string }>;
   deleteStudent: (id: number) => void;
   showForm: boolean;
   setShowForm: (v: boolean) => void;
@@ -1939,17 +1976,14 @@ function StudentPage({
   triggerAuthModal: (msg: string) => void;
 }) {
   const [filter, setFilter] = useState("all");
+  const [directionFilter, setDirectionFilter] = useState("all");
   const [studentSearch, setStudentSearch] = useState("");
   const [drawerStudent, setDrawerStudent] = useState<Student | null>(null);
   const [drawerDraft, setDrawerDraft] = useState<Student | null>(null);
   const [drawerTab, setDrawerTab] = useState<"abo" | "visits">("abo");
   const [visitRows, setVisitRows] = useState<CrmVisitRow[]>([]);
   const [visitRowsLoading, setVisitRowsLoading] = useState(false);
-  const [manualVisitDatetime, setManualVisitDatetime] = useState(() => {
-    const d = new Date();
-    const p = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-  });
+  const [visitDeletingId, setVisitDeletingId] = useState<number | null>(null);
   const [qrScanOpen, setQrScanOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "warn" | "err" } | null>(null);
 
@@ -1985,19 +2019,33 @@ function StudentPage({
       if (filter === "expired") return isExpired(c);
       return true;
     });
+    const byDirection =
+      directionFilter === "all"
+        ? byStatus
+        : byStatus.filter((c) => c.direction === directionFilter);
     const q = studentSearch.trim();
-    if (!q) return byStatus;
+    if (!q) return byDirection;
     const low = q.toLowerCase();
     const digits = q.replace(/\D/g, "");
-    return byStatus.filter(c => {
+    return byDirection.filter(c => {
       const nameHit = c.name.toLowerCase().includes(low);
       const phoneNorm = (c.phone || "").replace(/\D/g, "");
       const phoneHit = digits.length > 0 && phoneNorm.includes(digits);
       return nameHit || phoneHit;
     });
-  }, [data.students, filter, studentSearch]);
+  }, [data.students, filter, directionFilter, studentSearch]);
 
   const directionsList = data.directions || ["Йога", "Фитнес"];
+  const directionFilterOptions = useMemo(() => {
+    const used = data.students.map((s) => s.direction).filter(Boolean);
+    return [...new Set([...directionsList, ...used])].sort((a, b) => a.localeCompare(b, "ru"));
+  }, [data.students, directionsList]);
+
+  useEffect(() => {
+    if (directionFilter !== "all" && !directionFilterOptions.includes(directionFilter)) {
+      setDirectionFilter("all");
+    }
+  }, [directionFilter, directionFilterOptions]);
   const currentDirSelected = directionsList.includes(sf.direction) ? sf.direction : firstDir;
 
   const openDrawer = (c: Student) => {
@@ -2042,16 +2090,19 @@ function StudentPage({
     if (drawerStudent?.id === sid) refreshVisits();
   };
 
-  const handleManualVisit = () => {
-    if (!drawerStudent) return;
-    const dt = new Date(manualVisitDatetime);
-    if (Number.isNaN(dt.getTime())) {
-      alert("Укажите корректные дату и время");
-      return;
+  const handleDeleteVisit = async (row: CrmVisitRow) => {
+    if (!confirm("Удалить запись о визите? Занятие вернётся на абонемент.")) return;
+    setVisitDeletingId(row.id);
+    try {
+      const r = await deleteCrmVisit(row);
+      setToast({ msg: r.message, tone: r.ok ? "ok" : "err" });
+      if (r.ok) {
+        setVisitRows((prev) => prev.filter((v) => v.id !== row.id));
+        refreshVisits();
+      }
+    } finally {
+      setVisitDeletingId(null);
     }
-    const r = processStudentVisit(drawerStudent.id, dt);
-    setToast({ msg: r.message, tone: r.ok ? r.tone : "err" });
-    if (r.ok) refreshVisits();
   };
 
   useEffect(() => {
@@ -2188,6 +2239,53 @@ function StudentPage({
         <Input label="Быстрый поиск" value={studentSearch} onChange={setStudentSearch} placeholder="Фамилия, имя или цифры номера телефона…" />
       </div>
 
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Направление</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <button
+            type="button"
+            onClick={() => setDirectionFilter("all")}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 20,
+              border: `1px solid ${directionFilter === "all" ? C.sidebar : C.border}`,
+              background: directionFilter === "all" ? C.sidebar : "#FFFFFF",
+              color: directionFilter === "all" ? "#FFFFFF" : C.muted,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Все направления
+          </button>
+          {directionFilterOptions.map((dir) => {
+            const active = directionFilter === dir;
+            const col = getColor(dir);
+            return (
+              <button
+                key={dir}
+                type="button"
+                onClick={() => setDirectionFilter(dir)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 20,
+                  border: `1px solid ${active ? col : C.border}`,
+                  background: active ? `${col}18` : "#FFFFFF",
+                  color: active ? col : C.muted,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {dir}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div style={{ display: "inline-flex", background: "#F3F5F7", borderRadius: 8, padding: 3, marginBottom: 16, gap: 2, maxWidth: "100%", overflowX: "auto", border: `1px solid ${C.border}` }}>
         {[
           ["all", "Все ученики"],
@@ -2227,7 +2325,7 @@ function StudentPage({
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 360 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#F0F2F5" }}>
-                {["Ученик", "Телефон", "Оплата", "Дата оплаты", "Статус"].map(h => (
+                {["Ученик", "Направление", "Телефон", "Оплата", "Дата оплаты", "Статус"].map(h => (
                   <th key={h} style={{ textAlign: "left", padding: "14px 16px", fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -2235,7 +2333,7 @@ function StudentPage({
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", padding: 40, color: C.muted, fontWeight: 500 }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: 40, color: C.muted, fontWeight: 500 }}>
                     Нет учеников в списке фильтрации
                   </td>
                 </tr>
@@ -2266,6 +2364,7 @@ function StudentPage({
                         <span style={{ fontWeight: 600 }}>{c.name}</span>
                       </div>
                     </td>
+                    <td style={{ ...tdStyle, fontWeight: 600, color: getColor(c.direction) }}>{c.direction || "—"}</td>
                     <td style={{ ...tdStyle, color: C.muted, fontWeight: 500 }}>{c.phone || "—"}</td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: payOverdue ? "#ff453a" : C.text }}>
                       {paymentAmount > 0 ? fmtMoney(paymentAmount) : "—"}
@@ -2325,10 +2424,30 @@ function StudentPage({
                   <div style={{ fontSize: 18, fontWeight: 750, color: C.text, lineHeight: 1.2 }}>{drawerStudent.name}</div>
                   <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>ID карты: <span style={{ fontFamily: "var(--font-mono)", color: C.text }}>{drawerStudent.id}</span></div>
                 </div>
-                <button type="button" aria-label="Закрыть" onClick={() => setDrawerStudent(null)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 6, borderRadius: 8 }} className="hover:bg-white/10 hover:text-white">
+                <button type="button" aria-label="Закрыть" onClick={() => { setDrawerStudent(null); setDrawerDraft(null); }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 6, borderRadius: 8 }} className="hover:bg-black/5">
                   <X size={22} />
                 </button>
               </div>
+
+              {drawerDraft && (
+                <div
+                  style={{
+                    margin: "0 16px 12px",
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: `1px solid ${getColor(drawerDraft.direction)}35`,
+                    background: `${getColor(drawerDraft.direction)}10`,
+                  }}
+                >
+                  <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Направление</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: getColor(drawerDraft.direction) }}>{drawerDraft.direction}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 6, lineHeight: 1.4 }}>
+                    {drawerDraft.classType === "individual" ? "Индивидуально" : "Групповое"}
+                    {" · "}
+                    {drawerDraft.abon === "unlim" ? "безлимит" : "по занятиям"}
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: "flex", gap: 4, padding: "10px 12px", borderBottom: `1px solid ${C.border}`, background: "#F8F9FA" }}>
                 {([
@@ -2364,12 +2483,6 @@ function StudentPage({
               <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
                 {drawerTab === "abo" && drawerDraft && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.45 }}>
-                      Направление: <strong style={{ color: getColor(drawerDraft.direction) }}>{drawerDraft.direction}</strong>
-                      · {drawerDraft.classType === "individual" ? "Индивидуально" : "Групповое"}
-                      · Абонемент: {drawerDraft.abon === "unlim" ? "безлимит" : "по занятиям"}
-                    </div>
-
                     <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}>
                         <span style={{ color: C.muted }}>Телефон ученика</span>
@@ -2392,35 +2505,7 @@ function StudentPage({
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>Информация о родителях</div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                         <Input label="ФИО родителя" value={drawerDraft.parent_name} onChange={(v) => patchDrawer({ parent_name: v })} placeholder="Иванова Мария Петровна" />
-                        <div>
-                          <Input label="Телефон родителя" value={drawerDraft.parent_phone} onChange={(v) => patchDrawer({ parent_phone: v })} placeholder="+7 (999) 000-00-00" />
-                          <button
-                            type="button"
-                            disabled
-                            title="Скоро: связь через Mail.ru Агент (Макс)"
-                            style={{
-                              marginTop: 8,
-                              width: "100%",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 8,
-                              padding: "10px 14px",
-                              borderRadius: 8,
-                              border: `1px solid ${C.accent}`,
-                              background: "rgba(212, 167, 87, 0.12)",
-                              color: C.accent,
-                              fontSize: 13,
-                              fontWeight: 650,
-                              fontFamily: "inherit",
-                              cursor: "not-allowed",
-                              opacity: 0.92
-                            }}
-                          >
-                            <MessageSquare size={16} />
-                            Написать
-                          </button>
-                        </div>
+                        <Input label="Телефон родителя" value={drawerDraft.parent_phone} onChange={(v) => patchDrawer({ parent_phone: v })} placeholder="+7 (999) 000-00-00" />
                       </div>
                     </div>
 
@@ -2453,7 +2538,7 @@ function StudentPage({
                       )}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
                         <Input
-                          label="Сумма последнего платежа (₽)"
+                          label="Сумма (₽)"
                           type="number"
                           value={String(drawerDraft.last_payment_amount || "")}
                           onChange={(v) => patchDrawer({ last_payment_amount: parseFloat(v) || 0, sum: parseFloat(v) || 0 })}
@@ -2493,6 +2578,28 @@ function StudentPage({
 
                 {drawerTab === "visits" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <button
+                      type="button"
+                      onClick={() => setDrawerTab("abo")}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        alignSelf: "flex-start",
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        border: `1px solid ${C.border}`,
+                        background: "#FFFFFF",
+                        color: C.text,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <ChevronLeft size={16} />
+                      Назад к карточке
+                    </button>
                     {!user ? (
                       <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>История синхронизируется с Supabase после входа в аккаунт.</div>
                     ) : visitRowsLoading ? (
@@ -2503,24 +2610,41 @@ function StudentPage({
                       <div style={{ position: "relative", paddingLeft: 18 }}>
                         <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 2, background: C.border, borderRadius: 1 }} />
                         {visitRows.map((row, idx) => (
-                          <div key={row.id} style={{ position: "relative", marginBottom: idx === visitRows.length - 1 ? 0 : 18, paddingLeft: 16 }}>
+                          <div key={row.id} style={{ position: "relative", marginBottom: idx === visitRows.length - 1 ? 0 : 18, paddingLeft: 16, paddingRight: 28 }}>
                             <div style={{ position: "absolute", left: -1, top: 4, width: 12, height: 12, borderRadius: "50%", background: C.accent, border: `2px solid ${C.card}`, boxShadow: `0 0 0 1px ${C.border}` }} />
                             <div style={{ fontSize: 13, fontWeight: 650, color: C.text, display: "flex", alignItems: "center", gap: 6 }}>
                               <Clock size={13} style={{ opacity: 0.8 }}/> {fmtDateTime(row.visited_at)}
                             </div>
                             <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Запись №{row.id}</div>
+                            <button
+                              type="button"
+                              aria-label="Удалить визит"
+                              disabled={visitDeletingId === row.id}
+                              onClick={() => void handleDeleteVisit(row)}
+                              style={{
+                                position: "absolute",
+                                right: 0,
+                                top: 0,
+                                width: 28,
+                                height: 28,
+                                borderRadius: 6,
+                                border: `1px solid ${C.border}`,
+                                background: "#FFFFFF",
+                                color: "#ff453a",
+                                cursor: visitDeletingId === row.id ? "wait" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                opacity: visitDeletingId === row.id ? 0.5 : 1,
+                              }}
+                              className="hover:bg-red-50"
+                            >
+                              <X size={14} />
+                            </button>
                           </div>
                         ))}
                       </div>
                     )}
-                    <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                        <History size={14}/> Добавить визит вручную
-                      </div>
-                      <Input label="Дата и время посещения" type="datetime-local" value={manualVisitDatetime} onChange={setManualVisitDatetime} />
-                      <Btn onClick={handleManualVisit} color="green" style={{ width: "100%", marginTop: 12, justifyContent: "center" }}><Plus size={15}/> Сохранить визит</Btn>
-                      <div style={{ fontSize: 10, color: C.muted, marginTop: 8 }}>Запись попадёт в таблицу crm_visits и спишет занятие с текущего абонемента (как обычный визит).</div>
-                    </div>
                   </div>
                 )}
               </div>
