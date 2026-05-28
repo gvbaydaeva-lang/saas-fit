@@ -83,7 +83,7 @@ export default function ClientAuthPage() {
         <h1 className="text-2xl font-semibold tracking-tight mb-1">Личный кабинет клиента</h1>
         <p className="text-sm text-[#6F7B84] mb-6">
           Email, телефон и пароль{" "}
-          {mode === "login" ? "— для входа используются email и пароль" : "— регистрация с проверкой телефона"}
+          {mode === "login" ? "— для входа используются email и пароль" : "— для регистрации нового аккаунта"}
         </p>
 
         {!supabaseConfigured && (
@@ -119,8 +119,7 @@ export default function ClientAuthPage() {
             />
           </label>
           <p className="text-xs text-[#6F7B84] -mt-2 mb-1">
-            При регистрации номер должен быть в списке студии (
-            <code className="text-[10px]">customers_db</code>).
+            Номер телефона будет сохранён как контактная информация в профиле.
           </p>
 
           <label className="block text-sm font-medium">

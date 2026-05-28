@@ -31,20 +31,6 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
 }
 
-
-export async function isPhoneAllowed(phone: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("is_phone_in_customers_db", {
-    p_phone: normalizePhone(phone),
-  });
-  if (error) {
-    console.warn("[FitCRM] is_phone_in_customers_db:", error.message);
-    throw new Error(
-      "Не удалось проверить номер. Убедитесь, что в Supabase выполнена миграция (RPC is_phone_in_customers_db)."
-    );
-  }
-  return Boolean(data);
-}
-
 /**
  * Регистрация: реальный email для Supabase Auth + телефон в user_metadata и проверка whitelist.
  * @returns needsEmailConfirmation — true, если Supabase не выдал сессию сразу (включено подтверждение почты).
@@ -66,34 +52,6 @@ export async function registerWithEmailPhone(
     throw new Error("Пароль должен быть не короче 6 символов");
   }
 
-  let allowed: boolean;
-  try {
-    allowed = await isPhoneAllowed(normalized);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Ошибка проверки телефона";
-    throw new Error(msg);
-  }
-
-  if (!allowed) {
-    throw new Error(
-      "Этот номер не в списке клиентов студии. Обратитесь к администратору."
-    );
-  }
-
-  let fullName: unknown;
-  try {
-    const { data, error } = await supabase.rpc("get_customer_name_by_phone", {
-      p_phone: normalized,
-    });
-    if (error) {
-      console.warn("[FitCRM] get_customer_name_by_phone:", error.message);
-    } else {
-      fullName = data;
-    }
-  } catch {
-    /* имя опционально */
-  }
-
   const { data, error } = await supabase.auth.signUp({
     email: em,
     password,
@@ -105,7 +63,7 @@ export async function registerWithEmailPhone(
         phone: normalized,
         phone_raw: phone.trim(),
         email: em,
-        full_name: typeof fullName === "string" ? fullName : "",
+        full_name: "",
       },
     },
   });
