@@ -43,8 +43,9 @@ import {
 import { getEmailRedirectLoginUrl } from "./lib/resolveAppUrl";
 import {
   generateAuthToken,
-  copyPortalAccessMessage,
-  getMaxAgentChatUrl,
+  backfillStudentsWithAuthTokens,
+  copyPortalPublicLink,
+  tryOpenMaxSendPortal,
 } from "./lib/portal";
 import { studentQrPayload, parseStudentIdFromQr } from "./lib/studentQr";
 
@@ -359,7 +360,8 @@ function loadData(userId?: string): DB {
       const metadataItem = rawStudents.find((s: any) => s.id === -8888);
       const actualStudents = rawStudents.filter((s: any) => s.id !== -8888);
       
-      parsed.students = actualStudents.map((s: Student) => normalizeStudent(s));
+      const normalized = actualStudents.map((s: Student) => normalizeStudent(s));
+      parsed.students = backfillStudentsWithAuthTokens(normalized).students;
       if (!parsed.team) parsed.team = metadataItem?.team || [];
       if (!parsed.expenses) parsed.expenses = metadataItem?.expenses || [];
       return parsed;
@@ -883,16 +885,25 @@ export default function App() {
           directions = [...new Set([...directions, ...names])];
         }
 
-        setData({
-          students: actualStudents.map((s: Student) => normalizeStudent(s)),
+        let normalizedStudents = actualStudents.map((s: Student) => normalizeStudent(s));
+        const backfill = backfillStudentsWithAuthTokens(normalizedStudents);
+        normalizedStudents = backfill.students;
+
+        const loadedDb: DB = {
+          students: normalizedStudents,
           teachers: Array.isArray(row.teachers) ? row.teachers : [],
           schedule: Array.isArray(row.schedule) ? row.schedule : [],
           studioType: row.studio_type || "sport",
           studioName: row.studio_name || "Моя Студия",
           directions,
           team: metadataItem?.team || [],
-          expenses: metadataItem?.expenses || []
-        });
+          expenses: metadataItem?.expenses || [],
+        };
+        setData(loadedDb);
+
+        if (backfill.changed && currentUser) {
+          void saveToSupabase(loadedDb, currentUser);
+        }
       } else {
         const defaultData = loadData(targetId);
         const systemItem = {
@@ -2026,6 +2037,7 @@ function StudentPage({
   const [visitRowsLoading, setVisitRowsLoading] = useState(false);
   const [visitDeletingId, setVisitDeletingId] = useState<number | null>(null);
   const [qrScanOpen, setQrScanOpen] = useState(false);
+  const [portalLinkCopied, setPortalLinkCopied] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "warn" | "err" } | null>(null);
 
   useEffect(() => {
@@ -2575,26 +2587,24 @@ function StudentPage({
                           disabled={!drawerDraft.auth_token}
                           onClick={async () => {
                             if (!drawerDraft.auth_token) return;
-                            const ok = await copyPortalAccessMessage(drawerDraft.auth_token);
-                            setToast({
-                              msg: ok ? "Ссылка скопирована в буфер обмена" : "Не удалось скопировать ссылку",
-                              tone: ok ? "ok" : "err",
-                            });
+                            const ok = await copyPortalPublicLink(drawerDraft.auth_token);
+                            if (ok) {
+                              setPortalLinkCopied(true);
+                              window.setTimeout(() => setPortalLinkCopied(false), 2200);
+                            } else {
+                              setToast({ msg: "Не удалось скопировать ссылку", tone: "err" });
+                            }
                           }}
                         >
-                          <Copy size={15} /> Скопировать ссылку доступа
+                          <Copy size={15} /> {portalLinkCopied ? "Скопировано!" : "Скопировать ссылку доступа"}
                         </Btn>
                         <Btn
                           color="yellow"
                           style={{ width: "100%", justifyContent: "center" }}
+                          disabled={!drawerDraft.auth_token}
                           onClick={() => {
-                            const phone = drawerDraft.parent_phone || drawerDraft.phone;
-                            const url = getMaxAgentChatUrl(phone);
-                            if (!url) {
-                              setToast({ msg: "Укажите телефон родителя или ученика", tone: "err" });
-                              return;
-                            }
-                            window.location.href = url;
+                            if (!drawerDraft.auth_token) return;
+                            tryOpenMaxSendPortal(drawerDraft.auth_token);
                           }}
                         >
                           <Send size={15} /> Отправить в Макс

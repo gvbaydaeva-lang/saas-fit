@@ -20,6 +20,9 @@ const C = {
   err: "#ff453a",
 };
 
+const INVALID_LINK_MSG =
+  "Ошибка: ссылка недействительна. Пожалуйста, обратитесь в студию";
+
 function fmtDate(s: string) {
   if (!s) return "—";
   const [y, m, d] = s.split("-");
@@ -104,7 +107,7 @@ export default function StudentPortalPage() {
 
   const load = useCallback(async () => {
     if (!token?.trim()) {
-      setError("Ссылка доступа недействительна");
+      setError(INVALID_LINK_MSG);
       setLoading(false);
       return;
     }
@@ -158,12 +161,6 @@ export default function StudentPortalPage() {
       }}
     >
       <div style={{ maxWidth: 420, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 20, paddingTop: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-            Личный кабинет
-          </div>
-        </div>
-
         {toast && (
           <div
             style={{
@@ -199,7 +196,7 @@ export default function StudentPortalPage() {
               textAlign: "center",
               color: C.err,
               fontSize: 14,
-              lineHeight: 1.5,
+              lineHeight: 1.55,
             }}
           >
             {error}
@@ -208,32 +205,41 @@ export default function StudentPortalPage() {
 
         {!loading && student && dashboard && (
           <>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                textAlign: "center",
+                margin: "8px 0 18px",
+                lineHeight: 1.3,
+              }}
+            >
+              Здравствуйте, {student.name}!
+            </h1>
+
             <div
               style={{
                 background: C.card,
                 border: `1px solid ${C.border}`,
                 borderRadius: 14,
-                padding: "20px 18px",
+                padding: 16,
                 marginBottom: 14,
-                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
               }}
             >
-              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>{student.name}</div>
-              <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
-                Баланс занятий
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14 }}>
+                <span style={{ color: C.muted }}>Направление</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>{student.direction || "—"}</span>
               </div>
-              <div style={{ fontSize: 48, fontWeight: 800, color: C.accent, lineHeight: 1, marginBottom: 16 }}>
-                {balanceLabel(student)}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14 }}>
+                <span style={{ color: C.muted }}>Остаток занятий</span>
+                <span style={{ fontWeight: 700, color: C.accent, fontSize: 18 }}>{balanceLabel(student)}</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, textAlign: "left" }}>
-                <div style={{ background: C.bg, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
-                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Направление</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{student.direction || "—"}</div>
-                </div>
-                <div style={{ background: C.bg, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
-                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Срок абонемента</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{fmtDate(student.until)}</div>
-                </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14 }}>
+                <span style={{ color: C.muted }}>Срок абонемента</span>
+                <span style={{ fontWeight: 600, textAlign: "right" }}>{fmtDate(student.until)}</span>
               </div>
             </div>
 
@@ -247,11 +253,22 @@ export default function StudentPortalPage() {
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: C.muted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  marginBottom: 12,
+                }}
+              >
                 QR для пропуска
               </div>
               <PortalQr studentId={student.id} />
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>Покажите код администратору на ресепшене</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>
+                Покажите код администратору на ресепшене
+              </div>
             </div>
 
             <button
@@ -296,30 +313,39 @@ export default function StudentPortalPage() {
                 overflow: "hidden",
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: C.muted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  marginBottom: 12,
+                }}
+              >
                 История посещений
               </div>
               {dashboard.visits.length === 0 ? (
                 <div style={{ fontSize: 13, color: C.muted }}>Пока нет записей</div>
               ) : (
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <th style={{ textAlign: "left", padding: "8px 4px", color: C.muted, fontWeight: 600 }}>Дата</th>
-                      <th style={{ textAlign: "right", padding: "8px 4px", color: C.muted, fontWeight: 600 }}>Время</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboard.visits.map((v) => (
-                      <tr key={v.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: "10px 4px", display: "flex", alignItems: "center", gap: 6 }}>
-                          <Clock size={13} style={{ color: C.accent, flexShrink: 0 }} />
-                          {fmtDateTime(v.visited_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                  {dashboard.visits.map((v) => (
+                    <li
+                      key={v.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "10px 0",
+                        borderBottom: `1px solid ${C.border}`,
+                        fontSize: 13,
+                      }}
+                    >
+                      <Clock size={14} style={{ color: C.accent, flexShrink: 0 }} />
+                      {fmtDateTime(v.visited_at)}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </>
