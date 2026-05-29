@@ -23,3 +23,19 @@ export function getRouterBasename(): string | undefined {
   }
   return raw.replace(/\/$/, "") || undefined;
 }
+
+function getAppOriginPrefix(): string {
+  if (typeof window === "undefined") return "";
+  const segment = getRouterBasename();
+  return segment ? `${window.location.origin}/${segment}` : window.location.origin;
+}
+
+/** Публичная ссылка личного кабинета ученика: /portal/[auth_token] */
+export function getPortalUrl(authToken: string): string {
+  const token = encodeURIComponent(authToken.trim());
+  if (typeof window === "undefined") {
+    const base = String(import.meta.env.BASE_URL ?? "/").replace(/^\.\/?/, "").replace(/\/$/, "");
+    return base ? `/${base}/portal/${token}` : `/portal/${token}`;
+  }
+  return `${getAppOriginPrefix()}/portal/${token}`;
+}

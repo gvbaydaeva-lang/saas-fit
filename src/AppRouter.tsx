@@ -4,6 +4,7 @@ import App from "./App";
 import ClientAuthPage from "./pages/ClientAuthPage";
 import ClientDashboard from "./pages/ClientDashboard";
 import PendingVerificationPage from "./pages/PendingVerificationPage";
+import StudentPortalPage from "./pages/StudentPortalPage";
 import { getRouterBasename } from "./lib/resolveAppUrl";
 
 const basename = getRouterBasename();
@@ -16,6 +17,7 @@ export default function AppRouter() {
         <Route path="/login" element={<ClientAuthPage />} />
         <Route path="/auth/pending" element={<PendingVerificationPage />} />
         <Route path="/dashboard" element={<ClientDashboard />} />
+        <Route path="/portal/:token" element={<StudentPortalPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

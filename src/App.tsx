@@ -26,7 +26,9 @@ import {
   Cloud,
   Zap,
   ShieldAlert,
-  Clock
+  Clock,
+  Copy,
+  Send
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@supabase/supabase-js";
@@ -39,6 +41,12 @@ import {
   SUPABASE_ANON_KEY,
 } from "./lib/supabase";
 import { getEmailRedirectLoginUrl } from "./lib/resolveAppUrl";
+import {
+  generateAuthToken,
+  copyPortalAccessMessage,
+  getMaxAgentChatUrl,
+} from "./lib/portal";
+import { studentQrPayload, parseStudentIdFromQr } from "./lib/studentQr";
 
 export { supabase };
 
@@ -58,25 +66,6 @@ const fmtDateTime = (iso: string) => {
 };
 const fmtMoney = (n: number) => n.toLocaleString("ru-RU") + " ₽";
 const fmtClassType = (classType: string) => (classType === "individual" ? "Индивидуальный" : "Групповой");
-
-const STUDENT_QR_PREFIX = "fitcrm-student-";
-function studentQrPayload(studentId: number) {
-  return `${STUDENT_QR_PREFIX}${studentId}`;
-}
-
-function parseStudentIdFromQr(text: string): number | null {
-  const t = text.trim();
-  const m = new RegExp(`^${STUDENT_QR_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\d+)$`, "i").exec(t);
-  if (m) return parseInt(m[1], 10);
-  if (/^\d{10,}$/.test(t)) return parseInt(t, 10);
-  try {
-    const j = JSON.parse(t) as { student_id?: number | string };
-    const sid = j.student_id;
-    if (typeof sid === "number" && Number.isFinite(sid)) return sid;
-    if (typeof sid === "string" && /^\d+$/.test(sid)) return parseInt(sid, 10);
-  } catch { /* ignore */ }
-  return null;
-}
 
 const dirColors: Record<string, string> = {
   "Йога": "#8b5cf6",       // Violet 500
@@ -133,6 +122,7 @@ interface Student {
   last_payment_date: string;
   payment_history?: StudentPaymentEntry[];
   comments: string;
+  auth_token: string;
 }
 
 interface Teacher {
@@ -233,6 +223,7 @@ function normalizeStudent(raw: Partial<Student> & { id: number }): Student {
     last_payment_date: lastDate,
     payment_history,
     comments: raw.comments != null ? String(raw.comments) : "",
+    auth_token: raw.auth_token != null ? String(raw.auth_token).trim() : "",
   };
 }
 
@@ -1244,6 +1235,7 @@ export default function App() {
       last_payment_date: payDate,
       payment_history: payDate ? [{ date: payDate, amount }] : [],
       comments: "",
+      auth_token: generateAuthToken(),
     });
     save({ ...data, students: [...data.students, s] });
     setSf({name:"",phone:"",classType:"group",abon:"count",count:"10",until:todayStr(),sum:"",payment:"paid",direction:firstDir});
@@ -2104,7 +2096,14 @@ function StudentPage({
   const currentDirSelected = directionsList.includes(sf.direction) ? sf.direction : firstDir;
 
   const openDrawer = (c: Student) => {
-    const normalized = normalizeStudent(c);
+    let normalized = normalizeStudent(c);
+    if (!normalized.auth_token) {
+      normalized = { ...normalized, auth_token: generateAuthToken() };
+      if (user) {
+        const students = data.students.map((s) => (s.id === normalized.id ? normalized : s));
+        save({ ...data, students });
+      }
+    }
     setDrawerStudent(normalized);
     setDrawerDraft(normalized);
     setDrawerTab("abo");
@@ -2117,6 +2116,9 @@ function StudentPage({
       return;
     }
     let merged = normalizeStudent({ ...drawerStudent, ...drawerDraft });
+    if (!merged.auth_token) {
+      merged = { ...merged, auth_token: generateAuthToken() };
+    }
     const dirTrim = (merged.direction || "").trim();
     merged = {
       ...merged,
@@ -2561,6 +2563,45 @@ function StudentPage({
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                         <Input label="ФИО родителя" value={drawerDraft.parent_name} onChange={(v) => patchDrawer({ parent_name: v })} placeholder="Иванова Мария Петровна" />
                         <Input label="Телефон родителя" value={drawerDraft.parent_phone} onChange={(v) => patchDrawer({ parent_phone: v })} placeholder="+7 (999) 000-00-00" />
+                      </div>
+                    </div>
+
+                    <div style={{ padding: 14, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Доступ клиента</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <Btn
+                          color="blue"
+                          style={{ width: "100%", justifyContent: "center" }}
+                          disabled={!drawerDraft.auth_token}
+                          onClick={async () => {
+                            if (!drawerDraft.auth_token) return;
+                            const ok = await copyPortalAccessMessage(drawerDraft.auth_token);
+                            setToast({
+                              msg: ok ? "Ссылка скопирована в буфер обмена" : "Не удалось скопировать ссылку",
+                              tone: ok ? "ok" : "err",
+                            });
+                          }}
+                        >
+                          <Copy size={15} /> Скопировать ссылку доступа
+                        </Btn>
+                        <Btn
+                          color="yellow"
+                          style={{ width: "100%", justifyContent: "center" }}
+                          onClick={() => {
+                            const phone = drawerDraft.parent_phone || drawerDraft.phone;
+                            const url = getMaxAgentChatUrl(phone);
+                            if (!url) {
+                              setToast({ msg: "Укажите телефон родителя или ученика", tone: "err" });
+                              return;
+                            }
+                            window.location.href = url;
+                          }}
+                        >
+                          <Send size={15} /> Отправить в Макс
+                        </Btn>
+                        {!drawerDraft.auth_token && (
+                          <div style={{ fontSize: 11, color: C.muted }}>Сохраните карточку, чтобы активировать ссылку</div>
+                        )}
                       </div>
                     </div>
 

@@ -5,6 +5,7 @@
 --   last_payment_date    text   — дата оплаты (YYYY-MM-DD)
 --   payment_history      json   — [{ "date": "YYYY-MM-DD", "amount": number }, ...]
 --   comments             text   — заметки администратора (аллергии, пожелания и т.д.)
+--   auth_token           text   — uuid для ссылки /portal/[auth_token]
 --
 -- Отдельная миграция схемы не требуется: students хранится как jsonb.
 -- CRM нормализует записи при загрузке (normalizeStudent в App.tsx).
