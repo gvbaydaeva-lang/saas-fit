@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { 
   Users, 
   GraduationCap, 
@@ -57,6 +57,7 @@ const fmtDateTime = (iso: string) => {
   }
 };
 const fmtMoney = (n: number) => n.toLocaleString("ru-RU") + " ₽";
+const fmtClassType = (classType: string) => (classType === "individual" ? "Индивидуальный" : "Групповой");
 
 const STUDENT_QR_PREFIX = "fitcrm-student-";
 function studentQrPayload(studentId: number) {
@@ -541,60 +542,6 @@ function Input({ label, value, onChange, type="text", placeholder="", options=nu
           disabled={disabled}
         />
       )}
-    </div>
-  );
-}
-
-function DirectionField({
-  label,
-  value,
-  onChange,
-  suggestions,
-  placeholder = "Выберите из списка или введите новое",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  suggestions: string[];
-  placeholder?: string;
-}) {
-  const [isFocused, setIsFocused] = useState(false);
-  const listId = useId();
-  const trimmed = value.trim();
-  const accent = trimmed ? getColor(trimmed) : "#D4A757";
-  const uniqueSuggestions = [...new Set(suggestions.map((d) => d.trim()).filter(Boolean))];
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label style={{ fontSize: 11, color: "#6F7B84", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
-      <input
-        type="text"
-        list={listId}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        placeholder={placeholder}
-        style={{
-          background: "#FFFFFF",
-          border: `1px solid ${isFocused ? "#D4A757" : "#DADFE5"}`,
-          borderLeft: trimmed ? `3px solid ${accent}` : undefined,
-          borderRadius: 8,
-          color: "#333333",
-          padding: "8px 12px",
-          fontSize: 13,
-          width: "100%",
-          outline: "none",
-          boxShadow: isFocused ? "0 0 0 3px rgba(212, 167, 87, 0.22)" : "none",
-          transition: "all 0.15s ease-in-out",
-          fontFamily: "inherit",
-        }}
-      />
-      <datalist id={listId}>
-        {uniqueSuggestions.map((d) => (
-          <option key={d} value={d} />
-        ))}
-      </datalist>
     </div>
   );
 }
@@ -2138,6 +2085,11 @@ function StudentPage({
   }, [data.students, filter, directionFilter, studentSearch]);
 
   const directionsList = data.directions || ["Йога", "Фитнес"];
+  const drawerDirectionValue = drawerDraft
+    ? directionsList.includes(drawerDraft.direction)
+      ? drawerDraft.direction
+      : firstDir
+    : firstDir;
   const directionFilterOptions = useMemo(() => {
     return [...new Set(data.students.map((s) => (s.direction || "").trim()).filter(Boolean))].sort((a, b) =>
       a.localeCompare(b, "ru")
@@ -2166,7 +2118,10 @@ function StudentPage({
     }
     let merged = normalizeStudent({ ...drawerStudent, ...drawerDraft });
     const dirTrim = (merged.direction || "").trim();
-    merged = { ...merged, direction: dirTrim };
+    merged = {
+      ...merged,
+      direction: directionsList.includes(dirTrim) ? dirTrim : firstDir,
+    };
     if (merged.last_payment_date && merged.last_payment_amount > 0) {
       const history = [...(merged.payment_history || [])];
       const hasSame = history.some(
@@ -2178,11 +2133,7 @@ function StudentPage({
       merged = { ...merged, payment_history: history.slice(0, 20) };
     }
     const students = data.students.map((s) => (s.id === merged.id ? merged : s));
-    let nextDirections = data.directions || [];
-    if (dirTrim && !nextDirections.includes(dirTrim)) {
-      nextDirections = [...nextDirections, dirTrim];
-    }
-    save({ ...data, students, directions: nextDirections });
+    save({ ...data, students });
     setDrawerStudent(merged);
     setDrawerDraft(merged);
     setToast({ msg: "Карточка ученика сохранена", tone: "ok" });
@@ -2436,20 +2387,20 @@ function StudentPage({
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 360 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#F0F2F5" }}>
-                {["Ученик", "Направление", "Телефон", "Оплата", "Дата оплаты", "Статус"].map(h => (
-                  <th key={h} style={{ textAlign: "left", padding: "14px 16px", fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
+                {["№", "Ученик", "Направление", "Формат", "Телефон", "Оплата", "Дата оплаты", "Статус"].map((h) => (
+                  <th key={h} style={{ textAlign: h === "№" ? "center" : "left", padding: "14px 16px", fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap", width: h === "№" ? 44 : undefined }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: 40, color: C.muted, fontWeight: 500 }}>
+                  <td colSpan={8} style={{ textAlign: "center", padding: 40, color: C.muted, fontWeight: 500 }}>
                     Нет учеников в списке фильтрации
                   </td>
                 </tr>
               )}
-              {filtered.map(c => {
+              {filtered.map((c, rowIndex) => {
                 const exp = isExpired(c);
                 const payOverdue = isPaymentOverdue(c);
                 const tdStyle: React.CSSProperties = {
@@ -2469,6 +2420,7 @@ function StudentPage({
                     }}
                     className="hover:bg-black/[0.02] transition-colors"
                   >
+                    <td style={{ ...tdStyle, textAlign: "center", color: C.muted, fontWeight: 600, width: 44 }}>{rowIndex + 1}</td>
                     <td style={tdStyle}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${getColor(c.direction)}20`, border: `1px solid ${getColor(c.direction)}35`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: getColor(c.direction), fontWeight: 700, flexShrink: 0 }}>{c.name[0]}</div>
@@ -2476,6 +2428,7 @@ function StudentPage({
                       </div>
                     </td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: getColor(c.direction) }}>{c.direction || "—"}</td>
+                    <td style={{ ...tdStyle, color: C.muted, fontWeight: 500, whiteSpace: "nowrap" }}>{fmtClassType(c.classType)}</td>
                     <td style={{ ...tdStyle, color: C.muted, fontWeight: 500 }}>{c.phone || "—"}</td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: payOverdue ? "#ff453a" : C.text }}>
                       {paymentAmount > 0 ? fmtMoney(paymentAmount) : "—"}
@@ -2540,13 +2493,13 @@ function StudentPage({
                 </button>
               </div>
 
-              {drawerDraft && (
-                <div style={{ margin: "0 16px 12px", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: "#FFFFFF" }}>
-                  <DirectionField
+              {drawerDraft && directionsList.length > 0 && (
+                <div style={{ padding: "8px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
+                  <Input
                     label="Направление"
-                    value={drawerDraft.direction}
+                    value={drawerDirectionValue}
                     onChange={(v) => patchDrawer({ direction: v })}
-                    suggestions={directionsList}
+                    options={directionsList.map((d: string) => ({ value: d, label: d }))}
                   />
                 </div>
               )}
