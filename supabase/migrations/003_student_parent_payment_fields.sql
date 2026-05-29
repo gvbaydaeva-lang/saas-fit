@@ -4,6 +4,7 @@
 --   last_payment_amount  number — сумма последнего платежа
 --   last_payment_date    text   — дата оплаты (YYYY-MM-DD)
 --   payment_history      json   — [{ "date": "YYYY-MM-DD", "amount": number }, ...]
+--   comments             text   — заметки администратора (аллергии, пожелания и т.д.)
 --
 -- Отдельная миграция схемы не требуется: students хранится как jsonb.
 -- CRM нормализует записи при загрузке (normalizeStudent в App.tsx).

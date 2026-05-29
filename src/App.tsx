@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from "react";
 import { 
   Users, 
   GraduationCap, 
@@ -131,6 +131,7 @@ interface Student {
   last_payment_amount: number;
   last_payment_date: string;
   payment_history?: StudentPaymentEntry[];
+  comments: string;
 }
 
 interface Teacher {
@@ -230,6 +231,7 @@ function normalizeStudent(raw: Partial<Student> & { id: number }): Student {
     last_payment_amount: Number.isFinite(lastAmt) ? lastAmt : legacySum,
     last_payment_date: lastDate,
     payment_history,
+    comments: raw.comments != null ? String(raw.comments) : "",
   };
 }
 
@@ -539,6 +541,105 @@ function Input({ label, value, onChange, type="text", placeholder="", options=nu
           disabled={disabled}
         />
       )}
+    </div>
+  );
+}
+
+function DirectionField({
+  label,
+  value,
+  onChange,
+  suggestions,
+  placeholder = "Выберите из списка или введите новое",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: string[];
+  placeholder?: string;
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+  const listId = useId();
+  const trimmed = value.trim();
+  const accent = trimmed ? getColor(trimmed) : "#D4A757";
+  const uniqueSuggestions = [...new Set(suggestions.map((d) => d.trim()).filter(Boolean))];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <label style={{ fontSize: 11, color: "#6F7B84", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+      <input
+        type="text"
+        list={listId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        placeholder={placeholder}
+        style={{
+          background: "#FFFFFF",
+          border: `1px solid ${isFocused ? "#D4A757" : "#DADFE5"}`,
+          borderLeft: trimmed ? `3px solid ${accent}` : undefined,
+          borderRadius: 8,
+          color: "#333333",
+          padding: "8px 12px",
+          fontSize: 13,
+          width: "100%",
+          outline: "none",
+          boxShadow: isFocused ? "0 0 0 3px rgba(212, 167, 87, 0.22)" : "none",
+          transition: "all 0.15s ease-in-out",
+          fontFamily: "inherit",
+        }}
+      />
+      <datalist id={listId}>
+        {uniqueSuggestions.map((d) => (
+          <option key={d} value={d} />
+        ))}
+      </datalist>
+    </div>
+  );
+}
+
+function Textarea({
+  label,
+  value,
+  onChange,
+  placeholder = "",
+  rows = 4,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <label style={{ fontSize: 11, color: "#6F7B84", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        placeholder={placeholder}
+        rows={rows}
+        style={{
+          background: "#FFFFFF",
+          border: `1px solid ${isFocused ? "#D4A757" : "#DADFE5"}`,
+          borderRadius: 8,
+          color: "#333333",
+          padding: "10px 12px",
+          fontSize: 13,
+          width: "100%",
+          outline: "none",
+          resize: "vertical",
+          minHeight: 88,
+          lineHeight: 1.45,
+          boxShadow: isFocused ? "0 0 0 3px rgba(212, 167, 87, 0.22)" : "none",
+          transition: "all 0.15s ease-in-out",
+          fontFamily: "inherit",
+        }}
+      />
     </div>
   );
 }
@@ -1195,6 +1296,7 @@ export default function App() {
       last_payment_amount: amount,
       last_payment_date: payDate,
       payment_history: payDate ? [{ date: payDate, amount }] : [],
+      comments: "",
     });
     save({ ...data, students: [...data.students, s] });
     setSf({name:"",phone:"",classType:"group",abon:"count",count:"10",until:todayStr(),sum:"",payment:"paid",direction:firstDir});
@@ -2037,9 +2139,10 @@ function StudentPage({
 
   const directionsList = data.directions || ["Йога", "Фитнес"];
   const directionFilterOptions = useMemo(() => {
-    const used = data.students.map((s) => s.direction).filter(Boolean);
-    return [...new Set([...directionsList, ...used])].sort((a, b) => a.localeCompare(b, "ru"));
-  }, [data.students, directionsList]);
+    return [...new Set(data.students.map((s) => (s.direction || "").trim()).filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b, "ru")
+    );
+  }, [data.students]);
 
   useEffect(() => {
     if (directionFilter !== "all" && !directionFilterOptions.includes(directionFilter)) {
@@ -2062,6 +2165,8 @@ function StudentPage({
       return;
     }
     let merged = normalizeStudent({ ...drawerStudent, ...drawerDraft });
+    const dirTrim = (merged.direction || "").trim();
+    merged = { ...merged, direction: dirTrim };
     if (merged.last_payment_date && merged.last_payment_amount > 0) {
       const history = [...(merged.payment_history || [])];
       const hasSame = history.some(
@@ -2073,7 +2178,11 @@ function StudentPage({
       merged = { ...merged, payment_history: history.slice(0, 20) };
     }
     const students = data.students.map((s) => (s.id === merged.id ? merged : s));
-    save({ ...data, students });
+    let nextDirections = data.directions || [];
+    if (dirTrim && !nextDirections.includes(dirTrim)) {
+      nextDirections = [...nextDirections, dirTrim];
+    }
+    save({ ...data, students, directions: nextDirections });
     setDrawerStudent(merged);
     setDrawerDraft(merged);
     setToast({ msg: "Карточка ученика сохранена", tone: "ok" });
@@ -2239,52 +2348,54 @@ function StudentPage({
         <Input label="Быстрый поиск" value={studentSearch} onChange={setStudentSearch} placeholder="Фамилия, имя или цифры номера телефона…" />
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Направление</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          <button
-            type="button"
-            onClick={() => setDirectionFilter("all")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 20,
-              border: `1px solid ${directionFilter === "all" ? C.sidebar : C.border}`,
-              background: directionFilter === "all" ? C.sidebar : "#FFFFFF",
-              color: directionFilter === "all" ? "#FFFFFF" : C.muted,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Все направления
-          </button>
-          {directionFilterOptions.map((dir) => {
-            const active = directionFilter === dir;
-            const col = getColor(dir);
-            return (
-              <button
-                key={dir}
-                type="button"
-                onClick={() => setDirectionFilter(dir)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 20,
-                  border: `1px solid ${active ? col : C.border}`,
-                  background: active ? `${col}18` : "#FFFFFF",
-                  color: active ? col : C.muted,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                {dir}
-              </button>
-            );
-          })}
+      {directionFilterOptions.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Фильтр по направлениям учеников</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => setDirectionFilter("all")}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 20,
+                border: `1px solid ${directionFilter === "all" ? C.sidebar : C.border}`,
+                background: directionFilter === "all" ? C.sidebar : "#FFFFFF",
+                color: directionFilter === "all" ? "#FFFFFF" : C.muted,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Все
+            </button>
+            {directionFilterOptions.map((dir) => {
+              const active = directionFilter === dir;
+              const col = getColor(dir);
+              return (
+                <button
+                  key={dir}
+                  type="button"
+                  onClick={() => setDirectionFilter(dir)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 20,
+                    border: `1px solid ${active ? col : C.border}`,
+                    background: active ? `${col}18` : "#FFFFFF",
+                    color: active ? col : C.muted,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {dir}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ display: "inline-flex", background: "#F3F5F7", borderRadius: 8, padding: 3, marginBottom: 16, gap: 2, maxWidth: "100%", overflowX: "auto", border: `1px solid ${C.border}` }}>
         {[
@@ -2417,7 +2528,7 @@ function StudentPage({
               }}
             >
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${getColor(drawerStudent.direction)}22`, border: `1px solid ${getColor(drawerStudent.direction)}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: getColor(drawerStudent.direction), flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${getColor((drawerDraft?.direction || drawerStudent.direction || "Другое").trim() || "Другое")}22`, border: `1px solid ${getColor((drawerDraft?.direction || drawerStudent.direction || "Другое").trim() || "Другое")}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: getColor((drawerDraft?.direction || drawerStudent.direction || "Другое").trim() || "Другое"), flexShrink: 0 }}>
                   {drawerStudent.name[0]}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -2430,22 +2541,13 @@ function StudentPage({
               </div>
 
               {drawerDraft && (
-                <div
-                  style={{
-                    margin: "0 16px 12px",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: `1px solid ${getColor(drawerDraft.direction)}35`,
-                    background: `${getColor(drawerDraft.direction)}10`,
-                  }}
-                >
-                  <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Направление</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: getColor(drawerDraft.direction) }}>{drawerDraft.direction}</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 6, lineHeight: 1.4 }}>
-                    {drawerDraft.classType === "individual" ? "Индивидуально" : "Групповое"}
-                    {" · "}
-                    {drawerDraft.abon === "unlim" ? "безлимит" : "по занятиям"}
-                  </div>
+                <div style={{ margin: "0 16px 12px", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: "#FFFFFF" }}>
+                  <DirectionField
+                    label="Направление"
+                    value={drawerDraft.direction}
+                    onChange={(v) => patchDrawer({ direction: v })}
+                    suggestions={directionsList}
+                  />
                 </div>
               )}
 
@@ -2507,6 +2609,16 @@ function StudentPage({
                         <Input label="ФИО родителя" value={drawerDraft.parent_name} onChange={(v) => patchDrawer({ parent_name: v })} placeholder="Иванова Мария Петровна" />
                         <Input label="Телефон родителя" value={drawerDraft.parent_phone} onChange={(v) => patchDrawer({ parent_phone: v })} placeholder="+7 (999) 000-00-00" />
                       </div>
+                    </div>
+
+                    <div style={{ padding: 14, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                      <Textarea
+                        label="Комментарии"
+                        value={drawerDraft.comments}
+                        onChange={(v) => patchDrawer({ comments: v })}
+                        placeholder="Аллергии, пожелания, особенности занятий…"
+                        rows={4}
+                      />
                     </div>
 
                     <div style={{ padding: 14, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
