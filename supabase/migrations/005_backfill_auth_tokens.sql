@@ -4,7 +4,7 @@
 create or replace function public.jsonb_backfill_student_auth_tokens(students jsonb)
 returns jsonb
 language plpgsql
-immutable
+volatile
 as $$
 declare
   result jsonb := '[]'::jsonb;
