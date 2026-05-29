@@ -2494,7 +2494,7 @@ function StudentPage({
               </div>
 
               {drawerDraft && directionsList.length > 0 && (
-                <div style={{ padding: "8px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ padding: "6px 16px 8px", borderBottom: `1px solid ${C.border}`, background: "#FAFAFA" }}>
                   <Input
                     label="Направление"
                     value={drawerDirectionValue}
@@ -2603,7 +2603,7 @@ function StudentPage({
                       )}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
                         <Input
-                          label="Сумма (₽)"
+                          label="Сумма"
                           type="number"
                           value={String(drawerDraft.last_payment_amount || "")}
                           onChange={(v) => patchDrawer({ last_payment_amount: parseFloat(v) || 0, sum: parseFloat(v) || 0 })}
