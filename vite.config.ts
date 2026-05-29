@@ -8,7 +8,8 @@ import {defineConfig} from 'vite';
  * (Для деплоя только в подкаталог вида /saas-fit/ настройте base под хостинг отдельно.)
  */
 export default defineConfig({
-  base: './',
+  /** Корень сайта (Netlify). Относительный base ломает /portal/:token — JS не грузится. */
+  base: '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

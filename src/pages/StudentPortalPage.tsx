@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, Component, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
@@ -8,6 +8,7 @@ import {
   type PortalDashboard,
 } from "../lib/portal";
 import { studentQrPayload } from "../lib/studentQr";
+import { supabaseConfigured } from "../lib/supabase";
 
 const C = {
   bg: "#1a2229",
@@ -19,9 +20,6 @@ const C = {
   ok: "#34c759",
   err: "#ff453a",
 };
-
-const INVALID_LINK_MSG =
-  "Ошибка: ссылка недействительна. Пожалуйста, обратитесь в студию";
 
 function fmtDate(s: string) {
   if (!s) return "—";
@@ -45,14 +43,44 @@ function balanceLabel(student: PortalDashboard["student"]) {
   return String(student.count);
 }
 
+class PortalErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: string | null }
+> {
+  state = { error: null as string | null };
+
+  static getDerivedStateFromError(err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: `Ошибка приложения: ${msg}` };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div
+          style={{
+            minHeight: "100vh",
+            background: C.bg,
+            color: C.err,
+            padding: 24,
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <h1 style={{ fontSize: 18, marginBottom: 12 }}>Не удалось открыть кабинет</h1>
+          <p style={{ lineHeight: 1.5 }}>{this.state.error}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function PortalQr({ studentId }: { studentId: number }) {
   const [src, setSrc] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!studentId) {
-      setSrc(null);
-      return;
-    }
+    if (!studentId) return;
     let cancel = false;
     QRCode.toDataURL(studentQrPayload(studentId), {
       width: 200,
@@ -63,14 +91,17 @@ function PortalQr({ studentId }: { studentId: number }) {
       .then((url) => {
         if (!cancel) setSrc(url);
       })
-      .catch(() => {
-        if (!cancel) setSrc(null);
+      .catch((e) => {
+        if (!cancel) setQrError(e instanceof Error ? e.message : "QR error");
       });
     return () => {
       cancel = true;
     };
   }, [studentId]);
 
+  if (qrError) {
+    return <div style={{ color: C.muted, fontSize: 12 }}>QR: {qrError}</div>;
+  }
   if (!src) {
     return (
       <div
@@ -85,7 +116,6 @@ function PortalQr({ studentId }: { studentId: number }) {
       />
     );
   }
-
   return (
     <img
       src={src}
@@ -97,7 +127,7 @@ function PortalQr({ studentId }: { studentId: number }) {
   );
 }
 
-export default function StudentPortalPage() {
+function StudentPortalContent() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [checkingIn, setCheckingIn] = useState(false);
@@ -105,18 +135,59 @@ export default function StudentPortalPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
 
+  useEffect(() => {
+    document.body.classList.add("portal-page-active");
+    document.body.style.overflow = "auto";
+    document.body.style.height = "auto";
+    document.body.style.background = C.bg;
+    return () => {
+      document.body.classList.remove("portal-page-active");
+      document.body.style.overflow = "";
+      document.body.style.height = "";
+      document.body.style.background = "";
+    };
+  }, []);
+
   const load = useCallback(async () => {
+    console.log("[portal page] route param token:", token);
+
     if (!token?.trim()) {
-      setError(INVALID_LINK_MSG);
+      setError("Ошибка: в ссылке нет токена доступа");
       setLoading(false);
       return;
     }
+
+    if (!supabaseConfigured) {
+      setError(
+        "Ошибка БД: не заданы VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY при сборке сайта"
+      );
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    const r = await fetchPortalDashboard(token);
-    if (r.ok) setDashboard(r.data);
-    else setError(r.error);
-    setLoading(false);
+
+    try {
+      console.log("[portal page] starting fetchPortalDashboard");
+      const r = await fetchPortalDashboard(token);
+      console.log("[portal page] fetchPortalDashboard finished:", r.ok ? "ok" : r);
+
+      if (r.ok) {
+        setDashboard(r.data);
+        setError(null);
+      } else {
+        setDashboard(null);
+        setError(r.error);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[portal page] uncaught load error:", e);
+      setError(`Ошибка БД: ${msg}`);
+      setDashboard(null);
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
   useEffect(() => {
@@ -132,13 +203,19 @@ export default function StudentPortalPage() {
   const handleCheckIn = async () => {
     if (!token?.trim() || checkingIn) return;
     setCheckingIn(true);
-    const r = await portalCheckIn(token);
-    setCheckingIn(false);
-    if (r.ok) {
-      setDashboard(r.data);
-      setToast({ text: "Приход отмечен", ok: true });
-    } else {
-      setToast({ text: r.error, ok: false });
+    try {
+      const r = await portalCheckIn(token);
+      if (r.ok) {
+        setDashboard(r.data);
+        setToast({ text: "Приход отмечен", ok: true });
+      } else {
+        setToast({ text: r.error, ok: false });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setToast({ text: `Ошибка БД: ${msg}`, ok: false });
+    } finally {
+      setCheckingIn(false);
     }
   };
 
@@ -158,9 +235,14 @@ export default function StudentPortalPage() {
         color: C.text,
         fontFamily: "system-ui, -apple-system, sans-serif",
         padding: "16px 16px 32px",
+        boxSizing: "border-box",
       }}
     >
       <div style={{ maxWidth: 420, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 16, fontSize: 11, color: C.accent }}>
+          Личный кабинет · FitCRM
+        </div>
+
         {toast && (
           <div
             style={{
@@ -181,8 +263,11 @@ export default function StudentPortalPage() {
 
         {loading && (
           <div style={{ textAlign: "center", padding: 48, color: C.muted }}>
-            <Loader2 size={28} style={{ animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-            Загрузка…
+            <Loader2
+              size={28}
+              style={{ animation: "spin 1s linear infinite", margin: "0 auto 12px", display: "block" }}
+            />
+            Загрузка данных…
           </div>
         )}
 
@@ -190,20 +275,37 @@ export default function StudentPortalPage() {
           <div
             style={{
               background: C.card,
-              border: `1px solid ${C.border}`,
+              border: `1px solid ${C.err}`,
               borderRadius: 14,
               padding: 24,
-              textAlign: "center",
-              color: C.err,
+              color: C.text,
               fontSize: 14,
               lineHeight: 1.55,
             }}
           >
-            {error}
+            <div style={{ color: C.err, fontWeight: 700, marginBottom: 10 }}>Не удалось загрузить кабинет</div>
+            <div>{error}</div>
+            <button
+              type="button"
+              onClick={() => void load()}
+              style={{
+                marginTop: 16,
+                padding: "10px 16px",
+                borderRadius: 8,
+                border: "none",
+                background: C.accent,
+                color: "#1a2229",
+                fontWeight: 600,
+                cursor: "pointer",
+                width: "100%",
+              }}
+            >
+              Повторить
+            </button>
           </div>
         )}
 
-        {!loading && student && dashboard && (
+        {!loading && !error && student && dashboard && (
           <>
             <h1
               style={{
@@ -253,22 +355,8 @@ export default function StudentPortalPage() {
                 textAlign: "center",
               }}
             >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: C.muted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 12,
-                }}
-              >
-                QR для пропуска
-              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 12 }}>QR для пропуска</div>
               <PortalQr studentId={student.id} />
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>
-                Покажите код администратору на ресепшене
-              </div>
             </div>
 
             <button
@@ -282,23 +370,16 @@ export default function StudentPortalPage() {
                 border: "none",
                 fontSize: 15,
                 fontWeight: 800,
-                letterSpacing: "0.04em",
                 cursor: canCheckIn && !checkingIn ? "pointer" : "not-allowed",
                 background: canCheckIn ? C.accent : "#4a5560",
                 color: canCheckIn ? "#1a2229" : C.muted,
                 marginBottom: 14,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
               }}
             >
               {checkingIn ? (
-                <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+                "Отправка…"
               ) : dashboard.checked_in_today ? (
-                <>
-                  <CheckCircle2 size={18} /> Сегодня уже отмечено
-                </>
+                "Сегодня уже отмечено"
               ) : (
                 "ОТМЕТИТЬ ПРИХОД"
               )}
@@ -310,19 +391,9 @@ export default function StudentPortalPage() {
                 border: `1px solid ${C.border}`,
                 borderRadius: 14,
                 padding: 16,
-                overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: C.muted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 12,
-                }}
-              >
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 12 }}>
                 История посещений
               </div>
               {dashboard.visits.length === 0 ? (
@@ -341,7 +412,7 @@ export default function StudentPortalPage() {
                         fontSize: 13,
                       }}
                     >
-                      <Clock size={14} style={{ color: C.accent, flexShrink: 0 }} />
+                      <Clock size={14} style={{ color: C.accent }} />
                       {fmtDateTime(v.visited_at)}
                     </li>
                   ))}
@@ -350,8 +421,23 @@ export default function StudentPortalPage() {
             </div>
           </>
         )}
+
+        {!loading && !error && !student && (
+          <div style={{ color: C.muted, textAlign: "center", padding: 24 }}>
+            Нет данных для отображения
+          </div>
+        )}
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+  );
+}
+
+/** Страница портала: React Router /portal/:token (аналог app/portal/[token]/page.tsx в Next.js) */
+export default function StudentPortalPage() {
+  return (
+    <PortalErrorBoundary>
+      <StudentPortalContent />
+    </PortalErrorBoundary>
   );
 }
